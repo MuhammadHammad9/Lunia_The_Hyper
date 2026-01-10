@@ -9,6 +9,7 @@ import Profile from "./pages/Profile";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
 import Addresses from "./pages/Addresses";
+import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -43,6 +44,11 @@ const App = () => (
           <Route path="/addresses" element={
             <ProtectedRoute>
               <Addresses />
+            </ProtectedRoute>
+          } />
+          <Route path="/wishlist" element={
+            <ProtectedRoute>
+              <Wishlist />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
