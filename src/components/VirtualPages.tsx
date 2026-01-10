@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Gift, Send, CreditCard, Check, Sparkles } from 'lucide-react';
 import { useVirtualPage } from '@/hooks/use-virtual-page';
-import { allProducts, bundles, Product } from '@/lib/products';
+import { allProducts, bundles, Product, giftCardProduct } from '@/lib/products';
 import { ProductCard } from './ProductCard';
 import { useCart } from '@/hooks/use-cart';
+import { useSound } from '@/hooks/use-sound';
 import Lenis from '@studio-freight/lenis';
 
 interface VirtualPagesProps {
@@ -15,13 +16,20 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
   const { currentPage, closePage } = useVirtualPage();
   const [giftAmount, setGiftAmount] = useState(100);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [recipientName, setRecipientName] = useState('');
+  const [senderName, setSenderName] = useState('');
+  const [giftMessage, setGiftMessage] = useState('');
+  const [addedToCart, setAddedToCart] = useState(false);
   const pageRef = useRef<HTMLDivElement>(null);
   const { addItem } = useCart();
+  const { playClick, playPageOpen, playPageClose } = useSound();
 
   useEffect(() => {
     if (currentPage) {
       lenis?.stop();
       document.body.style.overflow = 'hidden';
+      playPageOpen();
       
       if (pageRef.current) {
         gsap.to(pageRef.current, {
@@ -33,6 +41,7 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
     } else {
       lenis?.start();
       document.body.style.overflow = '';
+      playPageClose();
       
       if (pageRef.current) {
         gsap.to(pageRef.current, {
@@ -42,7 +51,14 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
         });
       }
     }
-  }, [currentPage, lenis]);
+  }, [currentPage, lenis, playPageOpen, playPageClose]);
+
+  const handleAddGiftCard = () => {
+    addItem(giftCardProduct.id);
+    setAddedToCart(true);
+    playClick();
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
 
   const faqs = [
     {
@@ -54,6 +70,21 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
       question: 'How do I use the Regenerating Serum?',
       answer:
         "Apply 2-3 pumps to clean, dry skin morning and night. Gently pat (don't rub) into the face and neck until fully absorbed. Follow with our Hydrating Cream for best results.",
+    },
+    {
+      question: 'What makes Lunia different from other skincare brands?',
+      answer:
+        "Our products combine cutting-edge biotechnology with ethically sourced natural ingredients. Each formula is backed by 15 years of clinical research and contains our proprietary Bio-Regeneration Complex™.",
+    },
+    {
+      question: 'Do you test on animals?',
+      answer:
+        "Never. Lunia is proudly cruelty-free and certified by Leaping Bunny. We believe beautiful skin should never come at the expense of our animal friends.",
+    },
+    {
+      question: 'What is your return policy?',
+      answer:
+        "We offer a 60-day satisfaction guarantee. If you're not completely happy with your purchase, return it for a full refund. We believe in our products that much.",
     },
   ];
 
@@ -167,14 +198,17 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
               </div>
               <CloseButton onClick={closePage} />
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 pb-20">
               {faqs.map((faq, index) => (
                 <div
                   key={index}
                   className="faq-item group border-b border-foreground/10 pb-4"
                 >
                   <button
-                    onClick={() => setActiveFaq(activeFaq === index ? null : index)}
+                    onClick={() => {
+                      setActiveFaq(activeFaq === index ? null : index);
+                      playClick();
+                    }}
                     className="w-full flex justify-between items-center py-4 text-left hover-trigger"
                   >
                     <span className="font-display text-xl md:text-2xl text-foreground group-hover:text-primary transition-colors">
@@ -245,72 +279,217 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
 
       case 'gift-cards':
         return (
-          <div className="max-w-[1920px] mx-auto w-full min-h-full flex flex-col relative z-10 pt-20">
+          <div className="max-w-[1920px] mx-auto w-full min-h-full flex flex-col relative z-10 pt-20 pb-32">
             <div className="flex justify-between items-end mb-16">
               <div>
-                <span className="font-sans text-xs uppercase tracking-widest text-primary mb-2 block">
-                  The Gift of Radiance
+                <span className="font-sans text-xs uppercase tracking-widest text-primary mb-2 block flex items-center gap-2">
+                  <Gift className="w-4 h-4" /> The Gift of Radiance
                 </span>
                 <h1 className="font-display text-fluid-h2 text-foreground">Gift Cards</h1>
               </div>
               <CloseButton onClick={closePage} />
             </div>
-            <div className="grid lg:grid-cols-2 gap-20 items-center pb-32">
+
+            <div className="grid lg:grid-cols-2 gap-16 items-start">
               {/* Gift Card Preview */}
-              <div className="relative w-full aspect-[1.6/1] rounded-2xl overflow-hidden shadow-2xl group perspective-1000">
-                <div className="absolute inset-0 bg-gradient-to-br from-charcoal via-gray-900 to-black dark:from-white dark:via-alabaster dark:to-gray-200 p-12 flex flex-col justify-between transition-transform duration-700 preserve-3d group-hover:rotate-y-12">
-                  <div className="flex justify-between items-start">
-                    <span className="font-display text-3xl italic text-primary-foreground dark:text-foreground">
-                      Lunia
-                    </span>
-                    <span className="font-sans text-sm uppercase tracking-widest text-primary-foreground/60 dark:text-foreground/60">
-                      ${giftAmount}.00
-                    </span>
+              <div className="space-y-8">
+                <div className="relative w-full aspect-[1.6/1] rounded-2xl overflow-hidden shadow-2xl group perspective-1000">
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-br from-primary via-primary/90 to-primary/80 p-8 md:p-12 flex flex-col justify-between transition-transform duration-700 preserve-3d group-hover:scale-[1.02]"
+                  >
+                    {/* Card shine effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none transform -skew-x-12 translate-x-[-100%] group-hover:translate-x-[100%]" style={{ transition: 'transform 0.7s ease-out, opacity 0.3s' }} />
+                    
+                    {/* Top row */}
+                    <div className="flex justify-between items-start relative z-10">
+                      <div className="flex items-center gap-3">
+                        <Sparkles className="w-6 h-6 text-gold" />
+                        <span className="font-display text-2xl md:text-3xl italic text-primary-foreground">
+                          Lunia
+                        </span>
+                      </div>
+                      <span className="font-display text-xl md:text-2xl text-primary-foreground/90">
+                        ${giftAmount}
+                      </span>
+                    </div>
+
+                    {/* Middle - Decorative pattern */}
+                    <div className="absolute inset-0 opacity-10 pointer-events-none">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%]">
+                        {[...Array(8)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute top-1/2 left-1/2 border border-white/30 rounded-full"
+                            style={{
+                              width: `${(i + 1) * 80}px`,
+                              height: `${(i + 1) * 80}px`,
+                              transform: 'translate(-50%, -50%)',
+                            }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bottom row */}
+                    <div className="space-y-3 relative z-10">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-7 rounded bg-gradient-to-r from-gold/60 to-gold/30 border border-gold/40" />
+                        <CreditCard className="w-5 h-5 text-primary-foreground/40" />
+                      </div>
+                      <div className="flex justify-between items-end">
+                        <p className="font-mono text-xs text-primary-foreground/50 tracking-widest">
+                          GIFT CARD
+                        </p>
+                        <p className="font-sans text-[10px] text-primary-foreground/40 uppercase tracking-widest">
+                          Never expires
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="w-12 h-8 rounded bg-gradient-to-r from-gold/40 to-gold/10 border border-gold/30" />
-                    <p className="font-mono text-xs text-primary-foreground/40 dark:text-foreground/40">
-                      **** **** **** 4291
-                    </p>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent skew-x-12 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                </div>
+
+                {/* Card benefits */}
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { icon: Gift, label: 'Beautifully Packaged' },
+                    { icon: Send, label: 'Instant Delivery' },
+                    { icon: Check, label: 'Never Expires' },
+                  ].map((benefit, i) => (
+                    <div key={i} className="text-center p-4 rounded-lg bg-secondary/50 border border-foreground/5">
+                      <benefit.icon className="w-5 h-5 mx-auto mb-2 text-primary" />
+                      <span className="text-[10px] uppercase tracking-widest text-foreground/60">{benefit.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="space-y-10">
-                <p className="font-display text-2xl text-foreground/80 italic">
-                  Select an amount to gift.
-                </p>
-                <div className="grid grid-cols-3 gap-4">
-                  {[50, 100, 200].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setGiftAmount(amount)}
-                      className={`btn-elevator p-6 border transition-all hover-trigger ${
-                        giftAmount === amount
-                          ? 'border-primary bg-primary/5'
-                          : 'border-foreground/20 hover:border-primary'
-                      }`}
-                    >
-                      <span className="block font-display text-xl text-foreground">
-                        ${amount}
-                      </span>
-                    </button>
-                  ))}
+              {/* Gift Card Form */}
+              <div className="space-y-8">
+                <div>
+                  <h3 className="font-display text-2xl italic text-foreground mb-6">
+                    Select Amount
+                  </h3>
+                  <div className="grid grid-cols-4 gap-3">
+                    {[50, 100, 150, 200].map((amount) => (
+                      <button
+                        key={amount}
+                        onClick={() => {
+                          setGiftAmount(amount);
+                          playClick();
+                        }}
+                        className={`p-4 md:p-6 border rounded-lg transition-all duration-300 hover-trigger ${
+                          giftAmount === amount
+                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10'
+                            : 'border-foreground/10 hover:border-primary/50 bg-secondary/30'
+                        }`}
+                      >
+                        <span className={`block font-display text-xl md:text-2xl ${
+                          giftAmount === amount ? 'text-primary' : 'text-foreground'
+                        }`}>
+                          ${amount}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                <div className="space-y-6">
+                  <h3 className="font-display text-2xl italic text-foreground">
+                    Personalize Your Gift
+                  </h3>
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-foreground/50 mb-2 block">
+                        Recipient's Name
+                      </label>
+                      <input
+                        type="text"
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        placeholder="Their name"
+                        className="w-full bg-secondary/50 border border-foreground/10 rounded-lg px-4 py-3 outline-none focus:border-primary transition-colors text-foreground placeholder:text-foreground/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-widest text-foreground/50 mb-2 block">
+                        Recipient's Email
+                      </label>
+                      <input
+                        type="email"
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="their@email.com"
+                        className="w-full bg-secondary/50 border border-foreground/10 rounded-lg px-4 py-3 outline-none focus:border-primary transition-colors text-foreground placeholder:text-foreground/30"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs uppercase tracking-widest text-foreground/50 mb-2 block">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      value={senderName}
+                      onChange={(e) => setSenderName(e.target.value)}
+                      placeholder="Your name"
+                      className="w-full bg-secondary/50 border border-foreground/10 rounded-lg px-4 py-3 outline-none focus:border-primary transition-colors text-foreground placeholder:text-foreground/30"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs uppercase tracking-widest text-foreground/50 mb-2 block">
+                      Personal Message (Optional)
+                    </label>
+                    <textarea
+                      value={giftMessage}
+                      onChange={(e) => setGiftMessage(e.target.value)}
+                      placeholder="Write a heartfelt message..."
+                      rows={3}
+                      className="w-full bg-secondary/50 border border-foreground/10 rounded-lg px-4 py-3 outline-none focus:border-primary transition-colors text-foreground placeholder:text-foreground/30 resize-none"
+                    />
+                  </div>
+                </div>
+
                 <button
-                  onClick={() => addItem(999)}
-                  className="w-full btn-elevator btn-elevator-filled py-6 rounded-full overflow-hidden shadow-lg hover-trigger"
+                  onClick={handleAddGiftCard}
+                  disabled={addedToCart}
+                  className={`w-full btn-elevator rounded-full overflow-hidden shadow-lg hover-trigger transition-all duration-500 ${
+                    addedToCart 
+                      ? 'bg-primary/20 border-primary' 
+                      : 'btn-elevator-filled'
+                  }`}
                 >
                   <div className="btn-content">
-                    <span className="btn-label-initial font-sans text-xs uppercase tracking-widest">
-                      Add to Cart
+                    <span className="btn-label-initial font-sans text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                      {addedToCart ? (
+                        <>
+                          <Check className="w-4 h-4" /> Added to Cart
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-4 h-4" /> Add ${giftAmount} Gift Card to Cart
+                        </>
+                      )}
                     </span>
-                    <span className="btn-label-hover font-sans text-xs uppercase tracking-widest">
-                      Add to Cart
+                    <span className="btn-label-hover font-sans text-xs uppercase tracking-widest flex items-center justify-center gap-2">
+                      {addedToCart ? (
+                        <>
+                          <Check className="w-4 h-4" /> Added to Cart
+                        </>
+                      ) : (
+                        <>
+                          <Gift className="w-4 h-4" /> Add ${giftAmount} Gift Card to Cart
+                        </>
+                      )}
                     </span>
                   </div>
                 </button>
+
+                <p className="text-center text-xs text-foreground/40">
+                  Gift cards are delivered instantly via email and never expire.
+                </p>
               </div>
             </div>
           </div>
@@ -335,11 +514,18 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
   );
 };
 
-const CloseButton = ({ onClick }: { onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    className="w-12 h-12 rounded-full border border-foreground/20 flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground transition-all hover-trigger"
-  >
-    <X className="w-6 h-6" />
-  </button>
-);
+const CloseButton = ({ onClick }: { onClick: () => void }) => {
+  const { playClick } = useSound();
+  
+  return (
+    <button
+      onClick={() => {
+        playClick();
+        onClick();
+      }}
+      className="w-12 h-12 rounded-full border border-foreground/20 flex items-center justify-center text-foreground hover:bg-primary hover:text-primary-foreground transition-all hover-trigger group"
+    >
+      <X className="w-6 h-6 transition-transform duration-300 group-hover:rotate-90" />
+    </button>
+  );
+};

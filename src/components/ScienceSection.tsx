@@ -47,9 +47,12 @@ export const ScienceSection = () => {
       {/* Background */}
       <div className="absolute inset-0">
         <img
-          src="https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=2000&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?q=80&w=2000&auto=format&fit=crop"
           className="w-full h-full object-cover opacity-40 mix-blend-overlay"
           alt="Science background"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal via-primary/90 to-primary/40 dark:from-black dark:via-primary/10 dark:to-transparent" />
         <div ref={particlesRef} className="absolute inset-0 z-10" />
@@ -105,9 +108,12 @@ export const ScienceSection = () => {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-radial from-gold/20 to-transparent rounded-full blur-2xl" />
           </div>
           <img
-            src="https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800&auto=format&fit=crop"
+            src="https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?q=80&w=800&auto=format&fit=crop"
             className="absolute z-30 w-64 h-auto drop-shadow-2xl rounded-t-full border-b-4 border-gold/50 transition-transform duration-500 hover:scale-105"
             alt="Product"
+            onError={(e) => {
+              e.currentTarget.src = 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?q=80&w=800&auto=format&fit=crop';
+            }}
           />
         </div>
       </div>
