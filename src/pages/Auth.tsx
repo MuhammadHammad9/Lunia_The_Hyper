@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, Leaf, ArrowRight, Sparkles, Check, Mail, Lock, User } from 'lucide-react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Leaf, ArrowRight, Sparkles, Mail, Lock, User } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 import { useSound } from '@/hooks/use-sound';
 import { SoundProvider } from '@/hooks/use-sound';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 type AuthMode = 'login' | 'signup' | 'forgot-password';
 
 const AuthContent = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const initialMode = (searchParams.get('mode') as AuthMode) || 'login';
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  
+  // Auth state
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   
   // Form state
   const [name, setName] = useState('');
@@ -26,6 +34,34 @@ const AuthContent = () => {
   useEffect(() => {
     initTheme();
   }, [initTheme]);
+
+  // Set up auth state listener
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // Redirect to home if user is authenticated
+        if (session?.user) {
+          navigate('/');
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        navigate('/');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   // Check for reduced motion preference
   useEffect(() => {
@@ -41,15 +77,74 @@ const AuthContent = () => {
     playClick();
     setIsLoading(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    playSuccess();
-    setIsLoading(false);
+    try {
+      if (mode === 'signup') {
+        const redirectUrl = `${window.location.origin}/`;
+        
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: redirectUrl,
+            data: {
+              full_name: name,
+            }
+          }
+        });
+        
+        if (error) {
+          if (error.message.includes('already registered')) {
+            toast.error('This email is already registered. Please sign in instead.');
+          } else {
+            toast.error(error.message);
+          }
+        } else {
+          playSuccess();
+          toast.success('Account created successfully! Welcome to Lunia.');
+        }
+      } else if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            toast.error('Invalid email or password. Please try again.');
+          } else {
+            toast.error(error.message);
+          }
+        } else {
+          playSuccess();
+          toast.success('Welcome back!');
+        }
+      } else if (mode === 'forgot-password') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?mode=login`,
+        });
+        
+        if (error) {
+          toast.error(error.message);
+        } else {
+          playSuccess();
+          toast.success('Password reset instructions sent to your email.');
+          setMode('login');
+        }
+      }
+    } catch (error: any) {
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const switchMode = (newMode: AuthMode) => {
     playClick();
     setMode(newMode);
+    // Reset form
+    setName('');
+    setEmail('');
+    setPassword('');
   };
 
   const animationClass = reducedMotion ? '' : 'auth-animate-in';
@@ -146,6 +241,7 @@ const AuthContent = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
+                    minLength={6}
                     className="w-full pl-12 pr-12 py-4 bg-secondary/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 hover:bg-secondary/70"
                     required
                   />
@@ -219,12 +315,15 @@ const AuthContent = () => {
               </div>
             )}
 
-            {/* Social login buttons */}
+            {/* Social login buttons - placeholders for now */}
             {mode !== 'forgot-password' && (
               <div className={`grid grid-cols-2 gap-4 ${animationClass}`} style={staggerDelay(mode === 'signup' ? 7 : 6)}>
                 <button
                   type="button"
-                  onClick={playClick}
+                  onClick={() => {
+                    playClick();
+                    toast.info('GitHub authentication coming soon!');
+                  }}
                   onMouseEnter={playHover}
                   className="flex items-center justify-center gap-3 py-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary hover:border-primary/30 transition-all duration-300 group"
                 >
@@ -235,7 +334,10 @@ const AuthContent = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={playClick}
+                  onClick={() => {
+                    playClick();
+                    toast.info('Google authentication coming soon!');
+                  }}
                   onMouseEnter={playHover}
                   className="flex items-center justify-center gap-3 py-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary hover:border-primary/30 transition-all duration-300 group"
                 >
@@ -348,7 +450,7 @@ const AuthContent = () => {
                   { label: 'Hydration', value: 85, color: 'bg-primary' },
                   { label: 'Radiance', value: 72, color: 'bg-accent' },
                   { label: 'Elasticity', value: 91, color: 'bg-primary' },
-                ].map((item, i) => (
+                ].map((item) => (
                   <div key={item.label} className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-foreground/80">{item.label}</span>
@@ -356,11 +458,11 @@ const AuthContent = () => {
                     </div>
                     <div className="h-2 bg-secondary rounded-full overflow-hidden">
                       <div 
-                        className={`h-full ${item.color} rounded-full transition-all duration-1000`}
+                        className={`h-full ${item.color} rounded-full auth-progress-fill`}
                         style={{ 
-                          width: reducedMotion ? `${item.value}%` : '0%',
-                          animation: reducedMotion ? 'none' : `progressFill 1.5s ease-out ${0.5 + i * 0.2}s forwards`
-                        }}
+                          '--progress-width': `${item.value}%`,
+                          animationDelay: reducedMotion ? '0s' : '0.5s'
+                        } as React.CSSProperties}
                       />
                     </div>
                   </div>
@@ -368,41 +470,18 @@ const AuthContent = () => {
               </div>
             </div>
 
-            {/* Floating badge */}
+            {/* Floating accent card */}
             <div 
-              className={`absolute -top-6 -right-6 hyper-glass rounded-2xl px-4 py-3 ${animationClass}`}
+              className={`absolute -bottom-16 -left-16 hyper-glass rounded-2xl p-4 transform -rotate-6 hover:rotate-0 transition-transform duration-500 ${animationClass}`}
               style={staggerDelay(5)}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="w-4 h-4 text-primary-foreground" />
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center">
+                  <Leaf className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <p className="text-sm font-medium text-foreground">Premium Member</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Bottom floating card */}
-            <div 
-              className={`absolute -bottom-10 -left-10 hyper-glass rounded-2xl p-4 ${animationClass}`}
-              style={staggerDelay(6)}
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3].map((i) => (
-                    <div 
-                      key={i}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/60 to-accent/60 border-2 border-background flex items-center justify-center text-[10px] font-medium text-primary-foreground"
-                    >
-                      {String.fromCharCode(64 + i)}
-                    </div>
-                  ))}
-                </div>
-                <div className="text-sm">
-                  <span className="text-foreground font-medium">2,847</span>
-                  <span className="text-muted-foreground"> joined today</span>
+                  <p className="text-sm font-medium text-foreground">Natural Ingredients</p>
+                  <p className="text-xs text-muted-foreground">100% Organic</p>
                 </div>
               </div>
             </div>
@@ -413,7 +492,6 @@ const AuthContent = () => {
   );
 };
 
-// Wrap with SoundProvider
 const Auth = () => {
   return (
     <SoundProvider>
