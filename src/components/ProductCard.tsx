@@ -2,7 +2,8 @@ import { useState, forwardRef } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
 import { useProductModal } from '@/hooks/use-product-modal';
-import { Check } from 'lucide-react';
+import { useWishlist } from '@/hooks/use-wishlist';
+import { Check, Heart } from 'lucide-react';
 import { DisplayProduct } from '@/types/product';
 
 export type { DisplayProduct };
@@ -16,9 +17,14 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
     const { addItem } = useCart();
     const { playAddToCart, playHover, playClick } = useSound();
     const { openModal } = useProductModal();
+    const { isInWishlist, toggleWishlist } = useWishlist();
     const [added, setAdded] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [isAdding, setIsAdding] = useState(false);
+    const [isWishlistLoading, setIsWishlistLoading] = useState(false);
+
+    const productId = String(product.id);
+    const inWishlist = isInWishlist(productId);
 
     const handleAddToCart = async (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -45,6 +51,16 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
     const handleCardClick = () => {
       playClick();
       openModal(product);
+    };
+
+    const handleWishlistClick = async (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isWishlistLoading) return;
+      
+      setIsWishlistLoading(true);
+      playClick();
+      await toggleWishlist(productId);
+      setIsWishlistLoading(false);
     };
 
     // Fallback images for different product types
@@ -88,6 +104,19 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               </span>
             </div>
           )}
+          {/* Wishlist Button */}
+          <button
+            onClick={handleWishlistClick}
+            disabled={isWishlistLoading}
+            className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
+              inWishlist 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-background/80 backdrop-blur-sm text-foreground hover:bg-primary hover:text-primary-foreground'
+            } ${isWishlistLoading ? 'opacity-50' : ''}`}
+            aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart className={`w-4 h-4 ${inWishlist ? 'fill-current' : ''}`} />
+          </button>
           <button
             onClick={handleAddToCart}
             disabled={isAdding}
