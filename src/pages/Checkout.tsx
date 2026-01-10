@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Leaf, ArrowLeft, CreditCard, Truck, Shield, CheckCircle, Package, AlertCircle } from 'lucide-react';
+import { Leaf, ArrowLeft, Truck, Shield, CheckCircle, Package, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useCart } from '@/hooks/use-cart';
@@ -62,8 +62,7 @@ const Checkout = () => {
 
   const steps = [
     { number: 1, label: 'Shipping', icon: Truck },
-    { number: 2, label: 'Payment', icon: CreditCard },
-    { number: 3, label: 'Review', icon: Package },
+    { number: 2, label: 'Review', icon: Package },
   ];
 
   const validateShipping = (): boolean => {
@@ -92,11 +91,6 @@ const Checkout = () => {
     }
   };
 
-  const handlePaymentContinue = () => {
-    setStep(3);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   const handlePlaceOrder = async () => {
     if (!user) {
       toast.error('Please sign in to complete your order');
@@ -114,7 +108,7 @@ const Checkout = () => {
       // Generate order number
       const newOrderNumber = `LUN-${Date.now().toString(36).toUpperCase()}`;
       
-      // Create order in database
+      // Create order in database - Pay on Delivery
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -135,8 +129,8 @@ const Checkout = () => {
             country: shippingData.country,
             phone: shippingData.phone,
           },
-          payment_method: 'card',
-          payment_status: 'paid',
+          payment_method: 'pay_on_delivery',
+          payment_status: 'pending',
         })
         .select()
         .single();
@@ -203,11 +197,20 @@ const Checkout = () => {
             Order Confirmed!
           </h1>
           <p className="text-lg text-muted-foreground mb-2">
-            Thank you for your purchase
+            Thank you for your order
           </p>
-          <p className="text-sm text-muted-foreground mb-8">
+          <p className="text-sm text-muted-foreground mb-4">
             Order number: <span className="font-mono text-foreground">{orderNumber}</span>
           </p>
+          
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-8">
+            <p className="text-amber-600 dark:text-amber-400 font-medium">
+              💵 Pay on Delivery
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Please have ${grandTotal.toFixed(2)} ready when your order arrives
+            </p>
+          </div>
 
           <div className="bg-secondary/30 rounded-2xl p-6 border border-border mb-8 text-left">
             <h3 className="font-medium text-foreground mb-4">Shipping to:</h3>
@@ -494,91 +497,15 @@ const Checkout = () => {
                     type="submit"
                     className="w-full mt-6 py-4 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   >
-                    <CreditCard className="w-5 h-5" />
-                    Continue to Payment
+                    <Package className="w-5 h-5" />
+                    Review Order
                   </button>
                 </form>
               </div>
             )}
 
-            {/* Step 2: Payment */}
+            {/* Step 2: Review */}
             {step === 2 && (
-              <div className="bg-secondary/30 rounded-2xl p-6 lg:p-8 border border-border">
-                <h2 className="font-display text-2xl text-foreground mb-6 flex items-center gap-3">
-                  <CreditCard className="w-6 h-6 text-primary" />
-                  Payment Information
-                </h2>
-                
-                <form onSubmit={(e) => { e.preventDefault(); handlePaymentContinue(); }} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Card Number</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      placeholder="4242 4242 4242 4242"
-                      maxLength={19}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">Expiry Date</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">CVC</label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                        placeholder="123"
-                        maxLength={4}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Name on Card</label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      placeholder="John Doe"
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2 p-4 bg-primary/5 rounded-xl border border-primary/20">
-                    <Shield className="w-5 h-5 text-primary" />
-                    <p className="text-sm text-muted-foreground">
-                      Your payment information is encrypted and secure
-                    </p>
-                  </div>
-
-                  <div className="flex gap-4 mt-6">
-                    <button
-                      type="button"
-                      onClick={() => setStep(1)}
-                      className="flex-1 py-4 bg-secondary text-foreground rounded-xl font-medium hover:bg-secondary/80 transition-colors border border-border"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 py-4 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Package className="w-5 h-5" />
-                      Review Order
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            {/* Step 3: Review */}
-            {step === 3 && (
               <div className="bg-secondary/30 rounded-2xl p-6 lg:p-8 border border-border">
                 <h2 className="font-display text-2xl text-foreground mb-6 flex items-center gap-3">
                   <Package className="w-6 h-6 text-primary" />
@@ -604,20 +531,14 @@ const Checkout = () => {
                   </p>
                 </div>
 
-                {/* Payment Method */}
-                <div className="mb-6 p-4 bg-background rounded-xl border border-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-medium text-foreground">Payment Method</h3>
-                    <button 
-                      onClick={() => setStep(2)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                  <p className="text-sm text-muted-foreground flex items-center gap-2">
-                    <CreditCard className="w-4 h-4" />
-                    Credit Card ending in ****4242
+                {/* Payment Method - Pay on Delivery */}
+                <div className="mb-6 p-4 bg-amber-500/10 rounded-xl border border-amber-500/30">
+                  <h3 className="font-medium text-foreground mb-2">Payment Method</h3>
+                  <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                    💵 Pay on Delivery
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Payment will be collected when your order is delivered
                   </p>
                 </div>
 
@@ -647,7 +568,7 @@ const Checkout = () => {
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
+                    onClick={() => setStep(1)}
                     className="flex-1 py-4 bg-secondary text-foreground rounded-xl font-medium hover:bg-secondary/80 transition-colors border border-border"
                   >
                     Back
@@ -713,6 +634,12 @@ const Checkout = () => {
                   <span className="text-foreground">Total</span>
                   <span className="text-primary">${grandTotal.toFixed(2)}</span>
                 </div>
+              </div>
+              
+              <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                  💵 Pay on Delivery
+                </p>
               </div>
             </div>
           </div>
