@@ -6,6 +6,70 @@ import { reviews } from '@/lib/products';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// Escape HTML entities for any dynamic content used in className or style
+const escapeHtml = (text: string): string => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
+interface ReviewCardProps {
+  review: {
+    name: string;
+    role: string;
+    text: string;
+    img: string;
+  };
+  index: number;
+}
+
+const ReviewCard = ({ review, index }: ReviewCardProps) => {
+  return (
+    <div
+      className="review-card-3d hyper-glass absolute"
+      data-index={index}
+      style={{
+        width: '400px',
+        maxWidth: '85vw',
+        padding: '40px',
+        borderRadius: '16px',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        display: 'none',
+      }}
+    >
+      <div className="glass-spotlight"></div>
+      <div className="flex items-center gap-4 mb-6 relative z-10">
+        <img
+          src={review.img}
+          className="w-12 h-12 rounded-full object-cover border-2 border-primary"
+          alt={`${review.name}'s profile`}
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop';
+          }}
+        />
+        <div>
+          <h3 className="font-display text-xl font-bold text-foreground">
+            {review.name}
+          </h3>
+          <div className="text-[10px] uppercase tracking-widest text-primary">
+            {review.role}
+          </div>
+        </div>
+      </div>
+      <div className="flex text-gold mb-4 gap-1 relative z-10">
+        {[...Array(5)].map((_, i) => (
+          <Star key={i} className="w-3 h-3 fill-current" />
+        ))}
+      </div>
+      <p className="font-display text-lg italic text-foreground/80 relative z-10">
+        "{review.text}"
+      </p>
+    </div>
+  );
+};
+
 export const ReviewsSection = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const cardsContainerRef = useRef<HTMLDivElement>(null);
@@ -14,38 +78,6 @@ export const ReviewsSection = () => {
 
   useEffect(() => {
     if (!sectionRef.current || !cardsContainerRef.current) return;
-
-    // Create review cards dynamically
-    cardsContainerRef.current.innerHTML = '';
-    reviews.forEach((review) => {
-      const card = document.createElement('div');
-      card.className = 'review-card-3d hyper-glass absolute';
-      card.style.cssText = `
-        width: 400px;
-        max-width: 85vw;
-        padding: 40px;
-        border-radius: 16px;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
-      `;
-      card.innerHTML = `
-        <div class="glass-spotlight"></div>
-        <div class="flex items-center gap-4 mb-6 relative z-10">
-          <img src="${review.img}" class="w-12 h-12 rounded-full object-cover border-2 border-primary" alt="${review.name}">
-          <div>
-            <h3 class="font-display text-xl font-bold text-foreground">${review.name}</h3>
-            <div class="text-[10px] uppercase tracking-widest text-primary">${review.role}</div>
-          </div>
-        </div>
-        <div class="flex text-gold mb-4 gap-1 relative z-10">
-          ${Array(5).fill('<svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>').join('')}
-        </div>
-        <p class="font-display text-lg italic text-foreground/80 relative z-10">"${review.text}"</p>
-      `;
-      cardsContainerRef.current?.appendChild(card);
-    });
 
     const cards = gsap.utils.toArray('.review-card-3d');
     const Z_SPACING = 1000;
@@ -149,8 +181,12 @@ export const ReviewsSection = () => {
           </h2>
         </div>
 
-        {/* Cards Container */}
-        <div ref={cardsContainerRef} className="preserve-3d" />
+        {/* Cards Container - Now using React components instead of innerHTML */}
+        <div ref={cardsContainerRef} className="preserve-3d">
+          {reviews.map((review, index) => (
+            <ReviewCard key={index} review={review} index={index} />
+          ))}
+        </div>
       </div>
     </section>
   );
