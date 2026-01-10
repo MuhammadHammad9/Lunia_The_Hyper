@@ -160,7 +160,7 @@ export const UserMenu = () => {
                 <span className="text-sm text-foreground">My Profile</span>
               </Link>
               <Link
-                to="/profile"
+                to="/orders"
                 onClick={() => {
                   playClick();
                   setIsOpen(false);
@@ -171,7 +171,7 @@ export const UserMenu = () => {
                 <span className="text-sm text-foreground">Orders</span>
               </Link>
               <Link
-                to="/profile"
+                to="/wishlist"
                 onClick={() => {
                   playClick();
                   setIsOpen(false);
@@ -182,7 +182,7 @@ export const UserMenu = () => {
                 <span className="text-sm text-foreground">Wishlist</span>
               </Link>
               <Link
-                to="/profile"
+                to="/addresses"
                 onClick={() => {
                   playClick();
                   setIsOpen(false);
@@ -190,7 +190,7 @@ export const UserMenu = () => {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-secondary/50 transition-colors group"
               >
                 <Settings className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-sm text-foreground">Settings</span>
+                <span className="text-sm text-foreground">Addresses</span>
               </Link>
             </div>
 
