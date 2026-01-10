@@ -17,7 +17,10 @@ import { CTASection } from '@/components/CTASection';
 import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
 import { VirtualPages } from '@/components/VirtualPages';
+import { ProductDetailModal } from '@/components/ProductDetailModal';
+import { DarkModeBackground } from '@/components/DarkModeBackground';
 import { useTheme } from '@/hooks/use-theme';
+import { useProductModal } from '@/hooks/use-product-modal';
 import { SoundProvider } from '@/hooks/use-sound';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -26,6 +29,7 @@ const Index = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const lenisRef = useRef<Lenis | null>(null);
   const { initTheme } = useTheme();
+  const { isOpen, product, closeModal } = useProductModal();
 
   useEffect(() => {
     initTheme();
@@ -34,7 +38,6 @@ const Index = () => {
   useEffect(() => {
     if (!isLoaded) return;
 
-    // Initialize Lenis smooth scroll
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -49,14 +52,12 @@ const Index = () => {
     }
     requestAnimationFrame(raf);
 
-    // Connect Lenis to GSAP ScrollTrigger
     lenis.on('scroll', ScrollTrigger.update);
 
     gsap.ticker.add((time) => {
       lenis.raf(time * 1000);
     });
 
-    // Initialize reveal animations
     gsap.utils.toArray('.reveal-text').forEach((el: any) => {
       ScrollTrigger.create({
         trigger: el,
@@ -65,7 +66,6 @@ const Index = () => {
       });
     });
 
-    // Initialize stat items
     gsap.utils.toArray('.stat-item').forEach((item: any) => {
       ScrollTrigger.create({
         trigger: item,
@@ -82,12 +82,15 @@ const Index = () => {
 
   const handleLoadComplete = () => {
     setIsLoaded(true);
+    document.body.style.overflow = '';
+    window.scrollTo(0, 0);
     ScrollTrigger.refresh();
   };
 
   return (
     <SoundProvider>
       <div className="cursor-none">
+        <DarkModeBackground />
         <CustomCursor />
         <Loader onComplete={handleLoadComplete} />
         
@@ -110,6 +113,7 @@ const Index = () => {
             <Footer />
             <CartDrawer />
             <VirtualPages lenis={lenisRef.current} />
+            <ProductDetailModal product={product} isOpen={isOpen} onClose={closeModal} />
           </>
         )}
       </div>

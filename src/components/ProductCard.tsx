@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Product } from '@/lib/products';
 import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
+import { useProductModal } from '@/hooks/use-product-modal';
 import { Check } from 'lucide-react';
 
 interface ProductCardProps {
@@ -10,7 +11,8 @@ interface ProductCardProps {
 
 export const ProductCard = ({ product }: ProductCardProps) => {
   const { addItem } = useCart();
-  const { playAddToCart, playHover } = useSound();
+  const { playAddToCart, playHover, playClick } = useSound();
+  const { openModal } = useProductModal();
   const [added, setAdded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -20,6 +22,11 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     playAddToCart();
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
+  };
+
+  const handleCardClick = () => {
+    playClick();
+    openModal(product);
   };
 
   // Fallback images for different product types
@@ -36,6 +43,16 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     <div 
       className="group cursor-pointer hover-trigger"
       onMouseEnter={playHover}
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+      aria-label={`View ${product.name} details`}
     >
       <div className="relative aspect-[4/5] overflow-hidden rounded-sm mb-6 bg-secondary card-shine border border-transparent dark:border-white/5">
         <img
@@ -56,6 +73,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           className={`product-add-btn btn-elevator rounded-full overflow-hidden shadow-xl transition-all duration-300 ${
             added ? 'bg-primary/20 border-primary' : 'btn-elevator-filled'
           }`}
+          aria-label={added ? 'Added to cart' : `Add ${product.name} to cart - $${product.price}`}
         >
           <div className="btn-content">
             <span className="btn-label-initial font-sans text-[10px] uppercase tracking-widest flex items-center gap-2">
