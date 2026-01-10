@@ -110,6 +110,10 @@ const Checkout = () => {
       crypto.getRandomValues(randomBytes);
       const newOrderNumber = `LUN-${Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
       
+      const orderSubtotal = total();
+      const orderTax = orderSubtotal * 0.08;
+      const orderTotal = orderSubtotal + orderTax;
+      
       // Create order in database - Pay on Delivery
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -117,10 +121,10 @@ const Checkout = () => {
           user_id: user.id,
           order_number: newOrderNumber,
           status: 'pending',
-          subtotal: total(),
+          subtotal: orderSubtotal,
           shipping_cost: 0,
-          tax: total() * 0.08, // 8% tax
-          total: total() + (total() * 0.08),
+          tax: orderTax,
+          total: orderTotal,
           shipping_address: {
             first_name: shippingData.firstName,
             last_name: shippingData.lastName,
@@ -155,6 +159,39 @@ const Checkout = () => {
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Send order confirmation email
+      try {
+        await supabase.functions.invoke('send-order-confirmation', {
+          body: {
+            user_email: shippingData.email,
+            user_name: `${shippingData.firstName} ${shippingData.lastName}`,
+            order_number: newOrderNumber,
+            order_id: order.id,
+            items: items.map(item => ({
+              product_name: item.name,
+              quantity: item.quantity,
+              unit_price: item.price,
+              total_price: item.price * item.quantity,
+            })),
+            subtotal: orderSubtotal,
+            shipping_cost: 0,
+            tax: orderTax,
+            total: orderTotal,
+            shipping_address: {
+              first_name: shippingData.firstName,
+              last_name: shippingData.lastName,
+              address: shippingData.address,
+              city: shippingData.city,
+              state: shippingData.state,
+              zip_code: shippingData.zipCode,
+            },
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send order confirmation email:', emailError);
+        // Don't fail the order if email fails
+      }
 
       // Clear cart and show success
       clearCart();
