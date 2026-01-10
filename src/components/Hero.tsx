@@ -2,12 +2,14 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ArrowRight, PlayCircle } from 'lucide-react';
 import { useSound } from '@/hooks/use-sound';
+import { ProductSearch } from '@/components/ProductSearch';
+import { useProductModal } from '@/hooks/use-product-modal';
 
 export const Hero = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const heroAnimRefs = useRef<(HTMLSpanElement | HTMLParagraphElement | HTMLDivElement)[]>([]);
   const { playClick, playHover } = useSound();
-
+  const { openModal } = useProductModal();
   useEffect(() => {
     const tl = gsap.timeline({ delay: 2 });
     
@@ -79,6 +81,22 @@ export const Hero = () => {
             Revolutionary snail secretion filtrate technology meets cutting-edge
             peptides. Clinically proven to restore cellular regeneration in 7 days.
           </p>
+
+          {/* Product Search */}
+          <div ref={addToRefs} className="translate-y-full mb-8">
+            <ProductSearch 
+              onProductSelect={(product) => {
+                openModal({
+                  id: product.id,
+                  name: product.name,
+                  tagline: product.tagline,
+                  price: product.price,
+                  image: product.image_url,
+                  badge: product.badge || undefined,
+                });
+              }}
+            />
+          </div>
 
           <div ref={addToRefs} className="translate-y-full flex flex-wrap gap-4">
             <button

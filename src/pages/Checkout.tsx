@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Leaf, ArrowLeft, Truck, Shield, CheckCircle, Package, AlertCircle } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Leaf, ArrowLeft, Truck, Shield, CheckCircle, Package, AlertCircle, CreditCard, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useCart } from '@/hooks/use-cart';
+import { useDiscountCode } from '@/hooks/use-discount-code';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import { PromoCodeInput } from '@/components/PromoCodeInput';
 
 // Validation schemas
 const shippingSchema = z.object({
@@ -24,12 +26,14 @@ type ShippingFormData = z.infer<typeof shippingSchema>;
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
   const { items, total, clearCart } = useCart();
+  const { appliedDiscount, removeDiscount, calculateDiscountedTotal } = useDiscountCode();
   
   const [shippingData, setShippingData] = useState<ShippingFormData>({
     firstName: '',
@@ -44,6 +48,24 @@ const Checkout = () => {
   });
   
   const [errors, setErrors] = useState<Partial<ShippingFormData>>({});
+
+  // Handle Stripe redirect
+  useEffect(() => {
+    const sessionId = searchParams.get('session_id');
+    const canceled = searchParams.get('canceled');
+    
+    if (sessionId) {
+      // Payment successful
+      clearCart();
+      removeDiscount();
+      setOrderComplete(true);
+      setOrderNumber(sessionId.slice(-12).toUpperCase());
+    }
+    
+    if (canceled) {
+      toast.error('Payment was canceled. Please try again.');
+    }
+  }, [searchParams, clearCart, removeDiscount]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -62,7 +84,7 @@ const Checkout = () => {
 
   const steps = [
     { number: 1, label: 'Shipping', icon: Truck },
-    { number: 2, label: 'Review', icon: Package },
+    { number: 2, label: 'Payment', icon: CreditCard },
   ];
 
   const validateShipping = (): boolean => {
@@ -91,7 +113,7 @@ const Checkout = () => {
     }
   };
 
-  const handlePlaceOrder = async () => {
+  const handleStripeCheckout = async () => {
     if (!user) {
       toast.error('Please sign in to complete your order');
       return;
@@ -105,26 +127,15 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
-      // Generate cryptographically secure order number
-      const randomBytes = new Uint8Array(6);
-      crypto.getRandomValues(randomBytes);
-      const newOrderNumber = `LUN-${Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
-      
-      const orderSubtotal = total();
-      const orderTax = orderSubtotal * 0.08;
-      const orderTotal = orderSubtotal + orderTax;
-      
-      // Create order in database - Pay on Delivery
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          user_id: user.id,
-          order_number: newOrderNumber,
-          status: 'pending',
-          subtotal: orderSubtotal,
-          shipping_cost: 0,
-          tax: orderTax,
-          total: orderTotal,
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          items: items.map(item => ({
+            product_id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image,
+          })),
           shipping_address: {
             first_name: shippingData.firstName,
             last_name: shippingData.lastName,
@@ -135,80 +146,33 @@ const Checkout = () => {
             country: shippingData.country,
             phone: shippingData.phone,
           },
-          payment_method: 'pay_on_delivery',
-          payment_status: 'pending',
-        })
-        .select()
-        .single();
+          customer_email: shippingData.email,
+          discount_code_id: appliedDiscount?.discount_code_id,
+          discount_amount: calculateDiscountedTotal(subtotal).discountAmount,
+          success_url: `${window.location.origin}/checkout?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${window.location.origin}/checkout?canceled=true`,
+        },
+      });
 
-      if (orderError) throw orderError;
+      if (error) throw error;
 
-      // Create order items
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        product_name: item.name,
-        product_image: item.image,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Send order confirmation email
-      try {
-        await supabase.functions.invoke('send-order-confirmation', {
-          body: {
-            user_email: shippingData.email,
-            user_name: `${shippingData.firstName} ${shippingData.lastName}`,
-            order_number: newOrderNumber,
-            order_id: order.id,
-            items: items.map(item => ({
-              product_name: item.name,
-              quantity: item.quantity,
-              unit_price: item.price,
-              total_price: item.price * item.quantity,
-            })),
-            subtotal: orderSubtotal,
-            shipping_cost: 0,
-            tax: orderTax,
-            total: orderTotal,
-            shipping_address: {
-              first_name: shippingData.firstName,
-              last_name: shippingData.lastName,
-              address: shippingData.address,
-              city: shippingData.city,
-              state: shippingData.state,
-              zip_code: shippingData.zipCode,
-            },
-          },
-        });
-      } catch (emailError) {
-        console.error('Failed to send order confirmation email:', emailError);
-        // Don't fail the order if email fails
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
       }
-
-      // Clear cart and show success
-      clearCart();
-      setOrderNumber(newOrderNumber);
-      setOrderComplete(true);
-      toast.success('Order placed successfully!');
     } catch (error: any) {
-      console.error('Order error:', error);
-      toast.error('Failed to place order. Please try again.');
+      console.error('Checkout error:', error);
+      toast.error(error.message || 'Failed to create checkout session. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const shippingCost = 0; // Free shipping
-  const tax = total() * 0.08;
-  const grandTotal = total() + tax + shippingCost;
+  const subtotal = total();
+  const { discountAmount, finalTotal } = calculateDiscountedTotal(subtotal);
+  const tax = finalTotal * 0.08;
+  const grandTotal = finalTotal + tax;
 
   // Order confirmation screen
   if (orderComplete) {
@@ -233,31 +197,21 @@ const Checkout = () => {
           </div>
           
           <h1 className="font-display text-4xl text-foreground mb-4">
-            Order Confirmed!
+            Payment Successful!
           </h1>
           <p className="text-lg text-muted-foreground mb-2">
             Thank you for your order
           </p>
-          <p className="text-sm text-muted-foreground mb-4">
-            Order number: <span className="font-mono text-foreground">{orderNumber}</span>
+          <p className="text-sm text-muted-foreground mb-8">
+            Order reference: <span className="font-mono text-foreground">{orderNumber}</span>
           </p>
-          
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-8">
-            <p className="text-amber-600 dark:text-amber-400 font-medium">
-              💵 Pay on Delivery
+
+          <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-8">
+            <p className="text-primary font-medium">
+              ✓ Payment Confirmed
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Please have ${grandTotal.toFixed(2)} ready when your order arrives
-            </p>
-          </div>
-
-          <div className="bg-secondary/30 rounded-2xl p-6 border border-border mb-8 text-left">
-            <h3 className="font-medium text-foreground mb-4">Shipping to:</h3>
-            <p className="text-muted-foreground">
-              {shippingData.firstName} {shippingData.lastName}<br />
-              {shippingData.address}<br />
-              {shippingData.city}, {shippingData.state} {shippingData.zipCode}<br />
-              {shippingData.country}
+              Your payment has been processed securely via Stripe
             </p>
           </div>
 
@@ -273,7 +227,7 @@ const Checkout = () => {
               Continue Shopping
             </Link>
             <Link
-              to="/profile"
+              to="/orders"
               className="px-8 py-3 bg-secondary text-foreground rounded-xl font-medium hover:bg-secondary/80 transition-colors border border-border"
             >
               View Orders
@@ -536,22 +490,22 @@ const Checkout = () => {
                     type="submit"
                     className="w-full mt-6 py-4 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Package className="w-5 h-5" />
-                    Review Order
+                    <CreditCard className="w-5 h-5" />
+                    Continue to Payment
                   </button>
                 </form>
               </div>
             )}
 
-            {/* Step 2: Review */}
+            {/* Step 2: Payment */}
             {step === 2 && (
               <div className="bg-secondary/30 rounded-2xl p-6 lg:p-8 border border-border">
                 <h2 className="font-display text-2xl text-foreground mb-6 flex items-center gap-3">
-                  <Package className="w-6 h-6 text-primary" />
-                  Review Your Order
+                  <CreditCard className="w-6 h-6 text-primary" />
+                  Payment
                 </h2>
 
-                {/* Shipping Address */}
+                {/* Shipping Address Summary */}
                 <div className="mb-6 p-4 bg-background rounded-xl border border-border">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-medium text-foreground">Shipping Address</h3>
@@ -570,14 +524,15 @@ const Checkout = () => {
                   </p>
                 </div>
 
-                {/* Payment Method - Pay on Delivery */}
-                <div className="mb-6 p-4 bg-amber-500/10 rounded-xl border border-amber-500/30">
-                  <h3 className="font-medium text-foreground mb-2">Payment Method</h3>
-                  <p className="text-sm text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                    💵 Pay on Delivery
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Payment will be collected when your order is delivered
+                {/* Payment Method Info */}
+                <div className="mb-6 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Shield className="w-5 h-5 text-primary" />
+                    <h3 className="font-medium text-foreground">Secure Payment via Stripe</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    You'll be redirected to Stripe's secure checkout to complete your payment.
+                    We accept all major credit cards, Apple Pay, and Google Pay.
                   </p>
                 </div>
 
@@ -613,19 +568,19 @@ const Checkout = () => {
                     Back
                   </button>
                   <button
-                    onClick={handlePlaceOrder}
+                    onClick={handleStripeCheckout}
                     disabled={isSubmitting}
                     className="flex-1 py-4 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>
-                        <span className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                         Processing...
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="w-5 h-5" />
-                        Place Order - ${grandTotal.toFixed(2)}
+                        <CreditCard className="w-5 h-5" />
+                        Pay ${grandTotal.toFixed(2)}
                       </>
                     )}
                   </button>
@@ -656,11 +611,22 @@ const Checkout = () => {
                 ))}
               </div>
 
+              {/* Promo Code */}
+              <div className="mb-6 pb-6 border-b border-border">
+                <PromoCodeInput orderTotal={subtotal} />
+              </div>
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="text-foreground">${total().toFixed(2)}</span>
+                  <span className="text-foreground">${subtotal.toFixed(2)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-primary">
+                    <span>Discount{appliedDiscount && ` (${appliedDiscount.code})`}</span>
+                    <span>-${discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="text-primary">Free</span>
@@ -675,10 +641,11 @@ const Checkout = () => {
                 </div>
               </div>
               
-              <div className="mt-4 p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                  💵 Pay on Delivery
-                </p>
+              <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-2 justify-center text-xs text-primary">
+                  <Shield className="w-4 h-4" />
+                  <span>Secure Stripe Checkout</span>
+                </div>
               </div>
             </div>
           </div>
