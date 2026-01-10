@@ -122,7 +122,7 @@ export const UserMenu = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-background/95 backdrop-blur-xl border border-border rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in-0 zoom-in-95 duration-200">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-background/95 backdrop-blur-xl border border-border rounded-xl shadow-xl overflow-hidden z-[200] animate-in fade-in-0 zoom-in-95 duration-200">
           {/* User Info */}
           <div className="p-4 border-b border-border bg-secondary/30">
             <p className="font-medium text-foreground truncate">{displayName}</p>
