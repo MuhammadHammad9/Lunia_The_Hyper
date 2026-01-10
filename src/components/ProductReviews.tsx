@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, ThumbsUp, CheckCircle, User } from 'lucide-react';
+import { Star, Heart, CheckCircle, User } from 'lucide-react';
 import { useReviews, ProductReview } from '@/hooks/use-reviews';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ const StarRating = ({ rating, onRate, interactive = false }: { rating: number; o
   );
 };
 
-const ReviewCard = ({ review }: { review: ProductReview }) => {
+const ReviewCard = ({ review, onLike, productName }: { review: ProductReview; onLike: () => void; productName: string }) => {
   return (
     <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
       <div className="flex items-start justify-between gap-4">
@@ -53,7 +53,7 @@ const ReviewCard = ({ review }: { review: ProductReview }) => {
               {review.is_verified_purchase && (
                 <span className="inline-flex items-center gap-1 text-xs text-primary">
                   <CheckCircle className="w-3 h-3" />
-                  Verified Purchase
+                  Verified
                 </span>
               )}
             </div>
@@ -72,6 +72,20 @@ const ReviewCard = ({ review }: { review: ProductReview }) => {
       {review.content && (
         <p className="text-foreground/80 text-sm mt-2 leading-relaxed">{review.content}</p>
       )}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          onClick={onLike}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+            review.user_has_liked 
+              ? 'bg-red-500/10 text-red-500' 
+              : 'bg-secondary hover:bg-secondary/80 text-muted-foreground'
+          }`}
+        >
+          <Heart className={`w-4 h-4 ${review.user_has_liked ? 'fill-current' : ''}`} />
+          {review.likes_count || 0}
+        </button>
+      </div>
     </div>
   );
 };
@@ -142,7 +156,7 @@ const ReviewForm = ({ productId, onSubmit }: { productId: string; onSubmit: () =
 };
 
 export const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
-  const { reviews, loading, averageRating, reviewCount, refetch } = useReviews(productId);
+  const { reviews, loading, averageRating, reviewCount, refetch, likeReview } = useReviews(productId);
   const [showForm, setShowForm] = useState(false);
 
   if (loading) {
@@ -156,7 +170,6 @@ export const ProductReviews = ({ productId, productName }: ProductReviewsProps) 
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-display text-2xl text-foreground">Customer Reviews</h3>
@@ -169,35 +182,29 @@ export const ProductReviews = ({ productId, productName }: ProductReviewsProps) 
             </div>
           )}
         </div>
-        <Button
-          variant="outline"
-          onClick={() => setShowForm(!showForm)}
-        >
+        <Button variant="outline" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancel' : 'Write a Review'}
         </Button>
       </div>
 
-      {/* Review Form */}
       {showForm && (
-        <ReviewForm
-          productId={productId}
-          onSubmit={() => {
-            setShowForm(false);
-            refetch();
-          }}
-        />
+        <ReviewForm productId={productId} onSubmit={() => { setShowForm(false); refetch(); }} />
       )}
 
-      {/* Reviews List */}
       {reviewCount === 0 ? (
         <div className="text-center py-12 bg-secondary/20 rounded-xl">
-          <ThumbsUp className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+          <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
           <p className="text-muted-foreground">No reviews yet. Be the first to review {productName}!</p>
         </div>
       ) : (
         <div className="space-y-4">
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+            <ReviewCard 
+              key={review.id} 
+              review={review} 
+              productName={productName}
+              onLike={() => likeReview(review.id, review.user_id, productName)} 
+            />
           ))}
         </div>
       )}

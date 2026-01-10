@@ -14,6 +14,15 @@ export interface ProductReview {
   created_at: string;
   updated_at: string;
   user_name?: string;
+  likes_count?: number;
+  user_has_liked?: boolean;
+}
+
+export interface ReviewLike {
+  id: string;
+  review_id: string;
+  user_id: string;
+  created_at: string;
 }
 
 interface CreateReviewData {
@@ -37,6 +46,8 @@ export const useReviews = (productId?: string) => {
     }
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('product_reviews')
         .select('*')
@@ -45,27 +56,28 @@ export const useReviews = (productId?: string) => {
 
       if (error) throw error;
 
-      // Fetch user profiles for the reviews
-      const reviewsWithNames = await Promise.all(
+      // Fetch user profiles and likes for the reviews
+      const reviewsWithExtras = await Promise.all(
         (data || []).map(async (review) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', review.user_id)
-            .single();
+          const [profileRes, likesRes, userLikeRes] = await Promise.all([
+            supabase.from('profiles').select('full_name').eq('id', review.user_id).single(),
+            supabase.from('review_likes').select('id').eq('review_id', review.id),
+            user ? supabase.from('review_likes').select('id').eq('review_id', review.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+          ]);
 
           return {
             ...review,
-            user_name: profile?.full_name || 'Anonymous',
+            user_name: profileRes.data?.full_name || 'Anonymous',
+            likes_count: likesRes.data?.length || 0,
+            user_has_liked: !!userLikeRes.data,
           };
         })
       );
 
-      setReviews(reviewsWithNames);
+      setReviews(reviewsWithExtras);
       
-      // Calculate average rating
-      if (reviewsWithNames.length > 0) {
-        const avg = reviewsWithNames.reduce((sum, r) => sum + r.rating, 0) / reviewsWithNames.length;
+      if (reviewsWithExtras.length > 0) {
+        const avg = reviewsWithExtras.reduce((sum, r) => sum + r.rating, 0) / reviewsWithExtras.length;
         setAverageRating(Math.round(avg * 10) / 10);
       }
     } catch (error) {
@@ -179,6 +191,67 @@ export const useReviews = (productId?: string) => {
     }
   };
 
+  const likeReview = async (reviewId: string, reviewAuthorId: string, productName: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Sign in required", description: "Please sign in to like reviews", variant: "destructive" });
+        return false;
+      }
+
+      // Check if already liked
+      const { data: existingLike } = await supabase
+        .from('review_likes')
+        .select('id')
+        .eq('review_id', reviewId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingLike) {
+        // Unlike
+        await supabase.from('review_likes').delete().eq('id', existingLike.id);
+        toast({ title: "Like removed" });
+      } else {
+        // Like
+        await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id });
+        
+        // Send notification to review author (if not self)
+        if (reviewAuthorId !== user.id) {
+          const [authorProfile, userProfile] = await Promise.all([
+            supabase.from('profiles').select('full_name').eq('id', reviewAuthorId).single(),
+            supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+          ]);
+          
+          // Get author email from auth
+          const { data: authorUser } = await supabase.auth.admin?.getUserById?.(reviewAuthorId) || { data: null };
+          
+          // Use edge function for notification (email would be fetched server-side in production)
+          try {
+            await supabase.functions.invoke('send-review-notification', {
+              body: {
+                type: 'like',
+                recipient_email: authorUser?.user?.email || '',
+                recipient_name: authorProfile.data?.full_name,
+                liker_name: userProfile.data?.full_name || 'Someone',
+                product_name: productName,
+              }
+            });
+          } catch (e) {
+            console.log('Notification not sent (expected if no admin access)');
+          }
+        }
+        
+        toast({ title: "Review liked! ❤️" });
+      }
+
+      fetchReviews();
+      return true;
+    } catch (error) {
+      console.error('Error liking review:', error);
+      return false;
+    }
+  };
+
   return {
     reviews,
     loading,
@@ -186,6 +259,7 @@ export const useReviews = (productId?: string) => {
     reviewCount: reviews.length,
     createReview,
     deleteReview,
+    likeReview,
     refetch: fetchReviews,
   };
 };
