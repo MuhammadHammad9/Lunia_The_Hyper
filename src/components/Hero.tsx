@@ -1,10 +1,12 @@
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ArrowRight, PlayCircle } from 'lucide-react';
+import { useSound } from '@/hooks/use-sound';
 
 export const Hero = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const heroAnimRefs = useRef<(HTMLSpanElement | HTMLParagraphElement | HTMLDivElement)[]>([]);
+  const { playClick, playHover } = useSound();
 
   useEffect(() => {
     const tl = gsap.timeline({ delay: 2 });
@@ -24,6 +26,7 @@ export const Hero = () => {
   };
 
   const scrollToProducts = () => {
+    playClick();
     document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -36,9 +39,12 @@ export const Hero = () => {
       {/* Background */}
       <div className="absolute right-0 top-0 w-full md:w-[60%] h-full opacity-20 md:opacity-100 transition-opacity duration-700">
         <img
-          src="https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=2000&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?q=80&w=2000&auto=format&fit=crop"
           className="absolute inset-0 w-full h-full object-cover"
           alt="Hero background"
+          onError={(e) => {
+            e.currentTarget.src = 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?q=80&w=2000&auto=format&fit=crop';
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent" />
       </div>
@@ -77,6 +83,7 @@ export const Hero = () => {
           <div ref={addToRefs} className="translate-y-full flex flex-wrap gap-4">
             <button
               onClick={scrollToProducts}
+              onMouseEnter={playHover}
               className="btn-elevator btn-elevator-filled hover-trigger group rounded-full overflow-hidden shadow-lg hover:shadow-primary/20"
             >
               <div className="btn-content">
@@ -89,7 +96,11 @@ export const Hero = () => {
               </div>
             </button>
 
-            <button className="btn-elevator hover-trigger group rounded-full bg-transparent overflow-hidden border-foreground/10">
+            <button 
+              onMouseEnter={playHover}
+              onClick={playClick}
+              className="btn-elevator hover-trigger group rounded-full bg-transparent overflow-hidden border-foreground/10"
+            >
               <div className="btn-content">
                 <span className="btn-label-initial font-sans text-xs uppercase tracking-widest text-foreground">
                   <PlayCircle className="w-4 h-4 mr-2 inline" /> Watch Film
@@ -106,9 +117,12 @@ export const Hero = () => {
           <div className="relative w-[80%] ml-auto group">
             <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-500 rounded-xl z-10 pointer-events-none" />
             <img
-              src="https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=800&auto=format&fit=crop"
+              src="https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?q=80&w=800&auto=format&fit=crop"
               className="w-full rounded-xl shadow-2xl object-cover aspect-[4/5] transform transition-transform duration-700 group-hover:scale-[1.02]"
               alt="Featured product"
+              onError={(e) => {
+                e.currentTarget.src = 'https://images.unsplash.com/photo-1556228578-8c89e6adf883?q=80&w=800&auto=format&fit=crop';
+              }}
             />
 
             {/* Floating Glass Card */}
@@ -117,12 +131,12 @@ export const Hero = () => {
               <div className="flex items-center gap-3 mb-3 relative z-10">
                 <div className="flex -space-x-2">
                   <img
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=100&auto=format&fit=crop"
+                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=100&auto=format&fit=crop"
                     className="w-8 h-8 rounded-full border border-background object-cover"
                     alt="Customer"
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=100&auto=format&fit=crop"
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=100&auto=format&fit=crop"
                     className="w-8 h-8 rounded-full border border-background object-cover"
                     alt="Customer"
                   />

@@ -18,6 +18,7 @@ import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
 import { VirtualPages } from '@/components/VirtualPages';
 import { useTheme } from '@/hooks/use-theme';
+import { SoundProvider } from '@/hooks/use-sound';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -85,32 +86,34 @@ const Index = () => {
   };
 
   return (
-    <div className="cursor-none">
-      <CustomCursor />
-      <Loader onComplete={handleLoadComplete} />
-      
-      {isLoaded && (
-        <>
-          <Navbar lenis={lenisRef.current} />
-          
-          <main>
-            <Hero />
-            <StatsBar />
-            <FeaturesSection />
-            <ScienceSection />
-            <ProductsSection />
-            <ReviewsSection />
-            <Marquee />
-            <CTASection />
-            <Marquee reverse />
-          </main>
-          
-          <Footer />
-          <CartDrawer />
-          <VirtualPages lenis={lenisRef.current} />
-        </>
-      )}
-    </div>
+    <SoundProvider>
+      <div className="cursor-none">
+        <CustomCursor />
+        <Loader onComplete={handleLoadComplete} />
+        
+        {isLoaded && (
+          <>
+            <Navbar lenis={lenisRef.current} />
+            
+            <main>
+              <Hero />
+              <StatsBar />
+              <FeaturesSection />
+              <ScienceSection />
+              <ProductsSection />
+              <ReviewsSection />
+              <Marquee />
+              <CTASection />
+              <Marquee reverse />
+            </main>
+            
+            <Footer />
+            <CartDrawer />
+            <VirtualPages lenis={lenisRef.current} />
+          </>
+        )}
+      </div>
+    </SoundProvider>
   );
 };
 
