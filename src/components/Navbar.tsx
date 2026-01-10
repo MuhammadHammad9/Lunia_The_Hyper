@@ -60,7 +60,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
   return (
     <nav
       ref={navRef}
-      className={`hyper-glass fixed top-0 inset-x-0 z-[100] h-20 md:h-24 transition-all duration-500 ${
+      className={`hyper-glass fixed top-0 inset-x-0 z-[100] h-20 md:h-24 transition-all duration-500 !overflow-visible ${
         isHidden ? '-translate-y-full' : 'translate-y-0'
       }`}
     >
