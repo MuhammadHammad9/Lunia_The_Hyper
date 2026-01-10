@@ -1,14 +1,41 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Leaf, ArrowRight, Sparkles, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Leaf, ArrowRight, Sparkles, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 import { useSound } from '@/hooks/use-sound';
 import { SoundProvider } from '@/hooks/use-sound';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
+import { z } from 'zod';
+
+// Validation schemas for security
+const emailSchema = z.string().trim().email({ message: "Please enter a valid email address" }).max(255, { message: "Email is too long" });
+const passwordSchema = z.string().min(6, { message: "Password must be at least 6 characters" }).max(128, { message: "Password is too long" });
+const nameSchema = z.string().trim().min(1, { message: "Name is required" }).max(100, { message: "Name is too long" });
+
+const loginSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+const signupSchema = z.object({
+  name: nameSchema,
+  email: emailSchema,
+  password: passwordSchema,
+});
+
+const forgotPasswordSchema = z.object({
+  email: emailSchema,
+});
 
 type AuthMode = 'login' | 'signup' | 'forgot-password';
+
+interface ValidationErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+}
 
 const AuthContent = () => {
   const [searchParams] = useSearchParams();
@@ -18,6 +45,7 @@ const AuthContent = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   
   // Auth state
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -72,9 +100,41 @@ const AuthContent = () => {
     return () => mediaQuery.removeEventListener('change', handler);
   }, []);
 
+  const validateForm = (): boolean => {
+    setValidationErrors({});
+    
+    try {
+      if (mode === 'signup') {
+        signupSchema.parse({ name, email, password });
+      } else if (mode === 'login') {
+        loginSchema.parse({ email, password });
+      } else if (mode === 'forgot-password') {
+        forgotPasswordSchema.parse({ email });
+      }
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors: ValidationErrors = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            errors[err.path[0] as keyof ValidationErrors] = err.message;
+          }
+        });
+        setValidationErrors(errors);
+      }
+      return false;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     playClick();
+    
+    // Validate form before submitting
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -82,12 +142,12 @@ const AuthContent = () => {
         const redirectUrl = `${window.location.origin}/`;
         
         const { error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
             emailRedirectTo: redirectUrl,
             data: {
-              full_name: name,
+              full_name: name.trim(),
             }
           }
         });
@@ -104,7 +164,7 @@ const AuthContent = () => {
         }
       } else if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim(),
           password,
         });
         
@@ -119,7 +179,7 @@ const AuthContent = () => {
           toast.success('Welcome back!');
         }
       } else if (mode === 'forgot-password') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
           redirectTo: `${window.location.origin}/auth?mode=login`,
         });
         
@@ -141,6 +201,7 @@ const AuthContent = () => {
   const switchMode = (newMode: AuthMode) => {
     playClick();
     setMode(newMode);
+    setValidationErrors({});
     // Reset form
     setName('');
     setEmail('');
@@ -194,17 +255,25 @@ const AuthContent = () => {
                   Full name
                 </label>
                 <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                  <User className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${validationErrors.name ? 'text-destructive' : 'text-muted-foreground group-focus-within:text-primary'}`} />
                   <input
                     id="name"
                     type="text"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (validationErrors.name) setValidationErrors(prev => ({ ...prev, name: undefined }));
+                    }}
                     placeholder="Your full name"
-                    className="w-full pl-12 pr-4 py-4 bg-secondary/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 hover:bg-secondary/70"
-                    required
+                    className={`w-full pl-12 pr-4 py-4 bg-secondary/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-all duration-300 hover:bg-secondary/70 ${validationErrors.name ? 'border-destructive focus:ring-destructive/50 focus:border-destructive' : 'border-border focus:ring-primary/50 focus:border-primary'}`}
                   />
                 </div>
+                {validationErrors.name && (
+                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4" />
+                    {validationErrors.name}
+                  </p>
+                )}
               </div>
             )}
 
@@ -214,17 +283,25 @@ const AuthContent = () => {
                 Email address
               </label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${validationErrors.email ? 'text-destructive' : 'text-muted-foreground group-focus-within:text-primary'}`} />
                 <input
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (validationErrors.email) setValidationErrors(prev => ({ ...prev, email: undefined }));
+                  }}
                   placeholder="hello@lunia.com"
-                  className="w-full pl-12 pr-4 py-4 bg-secondary/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 hover:bg-secondary/70"
-                  required
+                  className={`w-full pl-12 pr-4 py-4 bg-secondary/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-all duration-300 hover:bg-secondary/70 ${validationErrors.email ? 'border-destructive focus:ring-destructive/50 focus:border-destructive' : 'border-border focus:ring-primary/50 focus:border-primary'}`}
                 />
               </div>
+              {validationErrors.email && (
+                <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4" />
+                  {validationErrors.email}
+                </p>
+              )}
             </div>
 
             {/* Password field - not for forgot password */}
@@ -234,16 +311,17 @@ const AuthContent = () => {
                   Password
                 </label>
                 <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                  <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${validationErrors.password ? 'text-destructive' : 'text-muted-foreground group-focus-within:text-primary'}`} />
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      if (validationErrors.password) setValidationErrors(prev => ({ ...prev, password: undefined }));
+                    }}
                     placeholder="••••••••"
-                    minLength={6}
-                    className="w-full pl-12 pr-12 py-4 bg-secondary/50 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-300 hover:bg-secondary/70"
-                    required
+                    className={`w-full pl-12 pr-12 py-4 bg-secondary/50 border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 transition-all duration-300 hover:bg-secondary/70 ${validationErrors.password ? 'border-destructive focus:ring-destructive/50 focus:border-destructive' : 'border-border focus:ring-primary/50 focus:border-primary'}`}
                   />
                   <button
                     type="button"
@@ -257,6 +335,12 @@ const AuthContent = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                {validationErrors.password && (
+                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4" />
+                    {validationErrors.password}
+                  </p>
+                )}
                 {mode === 'login' && (
                   <button
                     type="button"
