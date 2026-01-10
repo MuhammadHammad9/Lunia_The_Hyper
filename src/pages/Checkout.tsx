@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Leaf, ArrowLeft, Truck, Shield, CheckCircle, Package, AlertCircle, CreditCard, Loader2 } from 'lucide-react';
+import { Leaf, ArrowLeft, Truck, Shield, CheckCircle, Package, AlertCircle, CreditCard, Loader2, Banknote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useCart } from '@/hooks/use-cart';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import { PromoCodeInput } from '@/components/PromoCodeInput';
 
+type PaymentMethod = 'stripe' | 'cod';
 // Validation schemas
 const shippingSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50),
@@ -32,6 +33,8 @@ const Checkout = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('stripe');
+  const [orderPaymentMethod, setOrderPaymentMethod] = useState<string>('');
   const { items, total, clearCart } = useCart();
   const { appliedDiscount, removeDiscount, calculateDiscountedTotal } = useDiscountCode();
   
@@ -169,6 +172,104 @@ const Checkout = () => {
     }
   };
 
+  const handleCODCheckout = async () => {
+    if (!user) {
+      toast.error('Please sign in to complete your order');
+      return;
+    }
+
+    if (items.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Generate order number
+      const orderNum = `LUN-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      
+      // Create order in database
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          order_number: orderNum,
+          status: 'pending',
+          payment_status: 'pending',
+          payment_method: 'pay_on_delivery',
+          subtotal: subtotal,
+          discount_amount: discountAmount,
+          tax: tax,
+          shipping_cost: 0,
+          total: grandTotal,
+          shipping_address: {
+            first_name: shippingData.firstName,
+            last_name: shippingData.lastName,
+            address: shippingData.address,
+            city: shippingData.city,
+            state: shippingData.state,
+            zip_code: shippingData.zipCode,
+            country: shippingData.country,
+            phone: shippingData.phone,
+          },
+          discount_code_id: appliedDiscount?.discount_code_id || null,
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItems = items.map(item => ({
+        order_id: orderData.id,
+        product_id: item.id,
+        product_name: item.name,
+        product_image: item.image,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.price * item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // Apply discount code if used
+      if (appliedDiscount?.discount_code_id) {
+        await supabase.rpc('apply_discount_code', {
+          p_discount_code_id: appliedDiscount.discount_code_id,
+          p_order_id: orderData.id,
+          p_user_id: user.id,
+        });
+      }
+
+      // Clear cart and show success
+      clearCart();
+      removeDiscount();
+      setOrderNumber(orderNum);
+      setOrderPaymentMethod('cod');
+      setOrderComplete(true);
+      
+      toast.success('Order placed successfully!');
+    } catch (error: any) {
+      console.error('COD checkout error:', error);
+      toast.error(error.message || 'Failed to place order. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePlaceOrder = () => {
+    if (paymentMethod === 'stripe') {
+      handleStripeCheckout();
+    } else {
+      handleCODCheckout();
+    }
+  };
+
   const subtotal = total();
   const { discountAmount, finalTotal } = calculateDiscountedTotal(subtotal);
   const tax = finalTotal * 0.08;
@@ -197,7 +298,7 @@ const Checkout = () => {
           </div>
           
           <h1 className="font-display text-4xl text-foreground mb-4">
-            Payment Successful!
+            {orderPaymentMethod === 'cod' ? 'Order Placed!' : 'Payment Successful!'}
           </h1>
           <p className="text-lg text-muted-foreground mb-2">
             Thank you for your order
@@ -206,12 +307,15 @@ const Checkout = () => {
             Order reference: <span className="font-mono text-foreground">{orderNumber}</span>
           </p>
 
-          <div className="bg-primary/10 border border-primary/30 rounded-xl p-4 mb-8">
-            <p className="text-primary font-medium">
-              ✓ Payment Confirmed
+          <div className={`${orderPaymentMethod === 'cod' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-primary/10 border-primary/30'} border rounded-xl p-4 mb-8`}>
+            <p className={`${orderPaymentMethod === 'cod' ? 'text-amber-600 dark:text-amber-400' : 'text-primary'} font-medium`}>
+              {orderPaymentMethod === 'cod' ? '💵 Pay on Delivery' : '✓ Payment Confirmed'}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Your payment has been processed securely via Stripe
+              {orderPaymentMethod === 'cod' 
+                ? 'Please have the exact amount ready when your order arrives'
+                : 'Your payment has been processed securely via Stripe'
+              }
             </p>
           </div>
 
@@ -524,16 +628,60 @@ const Checkout = () => {
                   </p>
                 </div>
 
-                {/* Payment Method Info */}
-                <div className="mb-6 p-4 bg-primary/5 rounded-xl border border-primary/20">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Shield className="w-5 h-5 text-primary" />
-                    <h3 className="font-medium text-foreground">Secure Payment via Stripe</h3>
+                {/* Payment Method Selection */}
+                <div className="mb-6">
+                  <h3 className="font-medium text-foreground mb-4">Choose Payment Method</h3>
+                  <div className="grid gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('stripe')}
+                      className={`p-4 rounded-xl border-2 transition-all duration-300 flex items-start gap-4 text-left ${
+                        paymentMethod === 'stripe' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-primary/50 bg-background'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                        paymentMethod === 'stripe' ? 'border-primary' : 'border-muted-foreground'
+                      }`}>
+                        {paymentMethod === 'stripe' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CreditCard className="w-5 h-5 text-primary" />
+                          <span className="font-medium text-foreground">Credit/Debit Card</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Secure payment via Stripe. We accept all major cards, Apple Pay, and Google Pay.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('cod')}
+                      className={`p-4 rounded-xl border-2 transition-all duration-300 flex items-start gap-4 text-left ${
+                        paymentMethod === 'cod' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-primary/50 bg-background'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                        paymentMethod === 'cod' ? 'border-primary' : 'border-muted-foreground'
+                      }`}>
+                        {paymentMethod === 'cod' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Banknote className="w-5 h-5 text-amber-500" />
+                          <span className="font-medium text-foreground">Pay on Delivery</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Pay with cash or card when your order arrives. No advance payment required.
+                        </p>
+                      </div>
+                    </button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    You'll be redirected to Stripe's secure checkout to complete your payment.
-                    We accept all major credit cards, Apple Pay, and Google Pay.
-                  </p>
                 </div>
 
                 {/* Order Items */}
@@ -568,7 +716,7 @@ const Checkout = () => {
                     Back
                   </button>
                   <button
-                    onClick={handleStripeCheckout}
+                    onClick={handlePlaceOrder}
                     disabled={isSubmitting}
                     className="flex-1 py-4 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
@@ -577,10 +725,15 @@ const Checkout = () => {
                         <Loader2 className="w-5 h-5 animate-spin" />
                         Processing...
                       </>
-                    ) : (
+                    ) : paymentMethod === 'stripe' ? (
                       <>
                         <CreditCard className="w-5 h-5" />
                         Pay ${grandTotal.toFixed(2)}
+                      </>
+                    ) : (
+                      <>
+                        <Banknote className="w-5 h-5" />
+                        Place Order — ${grandTotal.toFixed(2)}
                       </>
                     )}
                   </button>
@@ -644,7 +797,7 @@ const Checkout = () => {
               <div className="mt-4 p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <div className="flex items-center gap-2 justify-center text-xs text-primary">
                   <Shield className="w-4 h-4" />
-                  <span>Secure Stripe Checkout</span>
+                  <span>Secure Checkout</span>
                 </div>
               </div>
             </div>

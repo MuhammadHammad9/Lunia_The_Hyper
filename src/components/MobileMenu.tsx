@@ -221,7 +221,7 @@ export const MobileMenu = () => {
                     <span>My Profile</span>
                   </Link>
                   <Link
-                    to="/profile"
+                    to="/orders"
                     onClick={() => {
                       playClick();
                       setIsOpen(false);
@@ -232,7 +232,7 @@ export const MobileMenu = () => {
                     <span>Orders</span>
                   </Link>
                   <Link
-                    to="/profile"
+                    to="/wishlist"
                     onClick={() => {
                       playClick();
                       setIsOpen(false);
@@ -243,7 +243,7 @@ export const MobileMenu = () => {
                     <span>Wishlist</span>
                   </Link>
                   <Link
-                    to="/profile"
+                    to="/addresses"
                     onClick={() => {
                       playClick();
                       setIsOpen(false);
@@ -251,7 +251,7 @@ export const MobileMenu = () => {
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-foreground hover:bg-secondary/50 transition-colors"
                   >
                     <Settings className="w-5 h-5" />
-                    <span>Settings</span>
+                    <span>Addresses</span>
                   </Link>
                 </>
               ) : (
