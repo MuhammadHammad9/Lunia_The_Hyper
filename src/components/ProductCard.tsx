@@ -90,16 +90,20 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
         }}
         aria-label={`View ${product.name} details`}
       >
-        <div className="relative aspect-[4/5] overflow-hidden rounded-sm mb-6 bg-secondary card-shine border border-transparent dark:border-white/5">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-xl mb-6 bg-secondary card-shine border border-transparent dark:border-white/5 group-hover:border-primary/20 transition-all duration-500">
           <img
             src={imageError ? getFallbackImage() : product.image}
-            className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110"
-            alt={product.name}
+            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+            alt={`${product.name} - ${product.tagline}`}
+            loading="lazy"
             onError={() => setImageError(true)}
           />
+          {/* Overlay gradient on hover */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
           {product.badge && (
-            <div className="hyper-glass absolute top-4 left-4 px-3 py-1 rounded-full z-10">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-foreground relative z-20">
+            <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full z-10 bg-primary text-primary-foreground shadow-lg">
+              <span className="text-[10px] uppercase tracking-widest font-bold">
                 {product.badge}
               </span>
             </div>
@@ -120,47 +124,41 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
           <button
             onClick={handleAddToCart}
             disabled={isAdding}
-            className={`product-add-btn btn-elevator rounded-full overflow-hidden shadow-xl transition-all duration-300 ${
-              added ? 'bg-primary/20 border-primary' : 'btn-elevator-filled'
+            className={`absolute bottom-6 left-1/2 -translate-x-1/2 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 px-6 py-3 rounded-full font-medium text-[11px] uppercase tracking-wider flex items-center gap-2 shadow-xl ${
+              added 
+                ? 'bg-primary/20 text-primary border border-primary' 
+                : 'bg-primary text-primary-foreground hover:shadow-2xl hover:shadow-primary/30'
             } ${isAdding ? 'opacity-70 cursor-wait' : ''}`}
             aria-label={added ? 'Added to cart' : `Add ${product.name} to cart - $${product.price}`}
           >
-            <div className="btn-content">
-              <span className="btn-label-initial font-sans text-[10px] uppercase tracking-widest flex items-center gap-2">
-                {added ? (
-                  <>
-                    <Check className="w-3 h-3" /> Added
-                  </>
-                ) : isAdding ? (
-                  'Adding...'
-                ) : (
-                  `Add - $${product.price}`
-                )}
-              </span>
-              <span className="btn-label-hover font-sans text-[10px] uppercase tracking-widest flex items-center gap-2">
-                {added ? (
-                  <>
-                    <Check className="w-3 h-3" /> Added
-                  </>
-                ) : isAdding ? (
-                  'Adding...'
-                ) : (
-                  `Add - $${product.price}`
-                )}
-              </span>
-            </div>
+            {added ? (
+              <>
+                <Check className="w-3 h-3" /> Added
+              </>
+            ) : isAdding ? (
+              'Adding...'
+            ) : (
+              `Add — $${product.price}`
+            )}
           </button>
         </div>
-        <div>
-          <h3 className="font-display text-2xl italic group-hover:text-primary transition-colors duration-300 text-foreground">
+        <div className="space-y-2">
+          <h3 className="font-display text-xl lg:text-2xl italic group-hover:text-primary transition-colors duration-300 text-foreground">
             {product.name}
           </h3>
-          <p className="text-[10px] uppercase tracking-widest text-foreground/50 mt-1">
+          <p className="text-[10px] uppercase tracking-widest text-foreground/50">
             {product.tagline}
           </p>
-          <span className="font-sans text-sm font-medium text-foreground">
-            ${product.price}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-sans text-base font-semibold text-foreground">
+              ${product.price}
+            </span>
+            {product.compareAtPrice && product.compareAtPrice > product.price && (
+              <span className="font-sans text-sm text-foreground/40 line-through">
+                ${product.compareAtPrice}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );

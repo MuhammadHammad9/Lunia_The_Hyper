@@ -84,31 +84,22 @@ export const Hero = () => {
             <button
               onClick={scrollToProducts}
               onMouseEnter={playHover}
-              className="btn-elevator btn-elevator-filled hover-trigger group rounded-full overflow-hidden shadow-lg hover:shadow-primary/20"
+              className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-full font-medium text-xs uppercase tracking-wider overflow-hidden transition-all duration-500 hover:shadow-2xl hover:shadow-primary/30 hover:-translate-y-1"
             >
-              <div className="btn-content">
-                <span className="btn-label-initial font-sans text-xs uppercase tracking-widest">
-                  Shop Collection <ArrowRight className="w-4 h-4 ml-2 inline" />
-                </span>
-                <span className="btn-label-hover font-sans text-xs uppercase tracking-widest">
-                  Shop Collection <ArrowRight className="w-4 h-4 ml-2 inline" />
-                </span>
-              </div>
+              <span className="relative z-10 flex items-center gap-2">
+                Shop Collection
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/90 to-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </button>
 
             <button 
               onMouseEnter={playHover}
               onClick={playClick}
-              className="btn-elevator hover-trigger group rounded-full bg-transparent overflow-hidden border-foreground/10"
+              className="group inline-flex items-center justify-center gap-2 px-8 py-4 border border-foreground/20 text-foreground rounded-full font-medium text-xs uppercase tracking-wider transition-all duration-300 hover:bg-foreground/5 hover:border-foreground/40"
             >
-              <div className="btn-content">
-                <span className="btn-label-initial font-sans text-xs uppercase tracking-widest text-foreground">
-                  <PlayCircle className="w-4 h-4 mr-2 inline" /> Watch Film
-                </span>
-                <span className="btn-label-hover font-sans text-xs uppercase tracking-widest">
-                  <PlayCircle className="w-4 h-4 mr-2 inline" /> Watch Film
-                </span>
-              </div>
+              <PlayCircle className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+              Watch Film
             </button>
           </div>
         </div>

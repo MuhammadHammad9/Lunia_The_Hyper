@@ -3,6 +3,7 @@ export interface DisplayProduct {
   name: string;
   tagline: string;
   price: number;
+  compareAtPrice?: number | null;
   image: string;
   badge: string | null;
   description?: string | null;
