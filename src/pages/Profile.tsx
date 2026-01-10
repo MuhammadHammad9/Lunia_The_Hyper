@@ -42,11 +42,11 @@ const Profile = () => {
   };
 
   const menuItems = [
-    { icon: User, label: 'Account Settings', href: '#', description: 'Manage your personal information' },
-    { icon: Package, label: 'Orders', href: '#', description: 'Track your orders and history' },
-    { icon: Heart, label: 'Wishlist', href: '#', description: 'Your saved products' },
-    { icon: MapPin, label: 'Addresses', href: '#', description: 'Manage delivery addresses' },
-    { icon: CreditCard, label: 'Payment Methods', href: '#', description: 'Your saved payment options' },
+    { icon: User, label: 'Account Settings', href: '/profile', description: 'Manage your personal information' },
+    { icon: Package, label: 'Orders', href: '/orders', description: 'Track your orders and history' },
+    { icon: Heart, label: 'Wishlist', href: '/profile', description: 'Your saved products' },
+    { icon: MapPin, label: 'Addresses', href: '/addresses', description: 'Manage delivery addresses' },
+    { icon: CreditCard, label: 'Payment Methods', href: '/profile', description: 'Your saved payment options' },
   ];
 
   if (loading) {
