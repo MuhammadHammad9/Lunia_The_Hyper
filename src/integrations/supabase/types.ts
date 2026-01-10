@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_carts: {
+        Row: {
+          cart_data: Json
+          cart_total: number
+          created_at: string
+          email_sent_at: string | null
+          id: string
+          recovered_at: string | null
+          reminder_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cart_data: Json
+          cart_total?: number
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          recovered_at?: string | null
+          reminder_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cart_data?: Json
+          cart_total?: number
+          created_at?: string
+          email_sent_at?: string | null
+          id?: string
+          recovered_at?: string | null
+          reminder_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       addresses: {
         Row: {
           address_line1: string
@@ -221,6 +257,45 @@ export type Database = {
         }
         Relationships: []
       }
+      discount_code_usage: {
+        Row: {
+          discount_code_id: string
+          id: string
+          order_id: string | null
+          used_at: string
+          user_id: string
+        }
+        Insert: {
+          discount_code_id: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id: string
+        }
+        Update: {
+          discount_code_id?: string
+          id?: string
+          order_id?: string | null
+          used_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discount_code_usage_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discount_code_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discount_codes: {
         Row: {
           code: string
@@ -423,6 +498,8 @@ export type Database = {
           billing_address: Json | null
           created_at: string
           discount: number | null
+          discount_amount: number | null
+          discount_code_id: string | null
           id: string
           notes: string | null
           order_number: string
@@ -431,6 +508,8 @@ export type Database = {
           shipping_address: Json | null
           shipping_cost: number | null
           status: string
+          stripe_checkout_session_id: string | null
+          stripe_payment_intent_id: string | null
           subtotal: number
           tax: number | null
           total: number
@@ -441,6 +520,8 @@ export type Database = {
           billing_address?: Json | null
           created_at?: string
           discount?: number | null
+          discount_amount?: number | null
+          discount_code_id?: string | null
           id?: string
           notes?: string | null
           order_number: string
@@ -449,6 +530,8 @@ export type Database = {
           shipping_address?: Json | null
           shipping_cost?: number | null
           status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
           subtotal: number
           tax?: number | null
           total: number
@@ -459,6 +542,8 @@ export type Database = {
           billing_address?: Json | null
           created_at?: string
           discount?: number | null
+          discount_amount?: number | null
+          discount_code_id?: string | null
           id?: string
           notes?: string | null
           order_number?: string
@@ -467,13 +552,23 @@ export type Database = {
           shipping_address?: Json | null
           shipping_cost?: number | null
           status?: string
+          stripe_checkout_session_id?: string | null
+          stripe_payment_intent_id?: string | null
           subtotal?: number
           tax?: number | null
           total?: number
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_discount_code_id_fkey"
+            columns: ["discount_code_id"]
+            isOneToOne: false
+            referencedRelation: "discount_codes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_reviews: {
         Row: {
@@ -543,6 +638,7 @@ export type Database = {
       }
       products: {
         Row: {
+          average_rating: number | null
           badge: string | null
           benefits: string[] | null
           category_id: string | null
@@ -564,6 +660,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          average_rating?: number | null
           badge?: string | null
           benefits?: string[] | null
           category_id?: string | null
@@ -585,6 +682,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          average_rating?: number | null
           badge?: string | null
           benefits?: string[] | null
           category_id?: string | null
@@ -786,6 +884,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_discount_code: {
+        Args: {
+          p_discount_code_id: string
+          p_order_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       generate_secure_order_number: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -793,6 +899,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      validate_discount_code: {
+        Args: { p_code: string; p_order_total: number; p_user_id: string }
+        Returns: Json
       }
     }
     Enums: {
