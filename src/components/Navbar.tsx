@@ -5,6 +5,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useVirtualPage } from '@/hooks/use-virtual-page';
 import { useSound } from '@/hooks/use-sound';
 import { UserMenu } from '@/components/UserMenu';
+import { MobileMenu } from '@/components/MobileMenu';
 import Lenis from '@studio-freight/lenis';
 
 interface NavbarProps {
@@ -59,12 +60,12 @@ export const Navbar = ({ lenis }: NavbarProps) => {
   return (
     <nav
       ref={navRef}
-      className={`hyper-glass fixed top-0 inset-x-0 z-[100] h-24 transition-all duration-500 ${
+      className={`hyper-glass fixed top-0 inset-x-0 z-[100] h-20 md:h-24 transition-all duration-500 ${
         isHidden ? '-translate-y-full' : 'translate-y-0'
       }`}
     >
       <div className="glass-spotlight" />
-      <div className="max-w-[1920px] mx-auto px-6 lg:px-12 h-full flex items-center justify-between relative z-10">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-12 h-full flex items-center justify-between relative z-10">
         {/* Logo */}
         <a
           href="#"
@@ -74,7 +75,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
             playClick();
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
-          className="font-display text-3xl font-medium tracking-tight relative z-50 group hover-trigger text-foreground"
+          className="font-display text-2xl md:text-3xl font-medium tracking-tight relative z-50 group hover-trigger text-foreground"
         >
           lunia
           <span className="text-xs align-top font-sans text-primary group-hover:rotate-12 transition-transform duration-300 inline-block">
@@ -82,7 +83,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
           </span>
         </a>
 
-        {/* Navigation Links */}
+        {/* Navigation Links - Hidden on mobile */}
         <div className="hidden md:flex items-center gap-10 font-sans text-[11px] uppercase tracking-[0.2em] font-medium text-foreground/80">
           <button
             onClick={() => scrollToSection('products')}
@@ -105,8 +106,8 @@ export const Navbar = ({ lenis }: NavbarProps) => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-4 sm:gap-6 z-50 text-foreground">
-          {/* Sound Toggle */}
+        <div className="flex items-center gap-3 sm:gap-6 z-50 text-foreground">
+          {/* Sound Toggle - Hidden on mobile */}
           <button
             onClick={handleSoundToggle}
             className="relative hover:text-primary transition-all hover:scale-110 duration-300 hover-trigger group hidden sm:block"
@@ -118,7 +119,6 @@ export const Navbar = ({ lenis }: NavbarProps) => {
               ) : (
                 <VolumeX className="w-5 h-5 transition-transform duration-300" />
               )}
-              {/* Animated indicator */}
               {isSoundEnabled && (
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
               )}
@@ -134,7 +134,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
 
-          {/* Search */}
+          {/* Search - Hidden on mobile */}
           <button
             onClick={() => playClick()}
             className="hover:text-primary transition-colors hover:scale-110 duration-300 hover-trigger hidden sm:block"
@@ -160,8 +160,13 @@ export const Navbar = ({ lenis }: NavbarProps) => {
             )}
           </button>
 
-          {/* User Menu */}
-          <UserMenu />
+          {/* User Menu - Hidden on mobile */}
+          <div className="hidden md:block">
+            <UserMenu />
+          </div>
+
+          {/* Mobile Menu */}
+          <MobileMenu />
         </div>
       </div>
     </nav>
