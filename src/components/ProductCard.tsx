@@ -1,12 +1,24 @@
 import { useState } from 'react';
-import { Product } from '@/lib/products';
 import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
 import { useProductModal } from '@/hooks/use-product-modal';
 import { Check } from 'lucide-react';
 
+export interface DisplayProduct {
+  id: string | number;
+  name: string;
+  tagline: string;
+  price: number;
+  image: string;
+  badge: string | null;
+  description?: string | null;
+  ingredients?: string | null;
+  benefits?: string[] | null;
+  images?: string[];
+}
+
 interface ProductCardProps {
-  product: Product;
+  product: DisplayProduct;
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
@@ -18,7 +30,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    addItem(product.id);
+    addItem({
+      id: product.id,
+      name: product.name,
+      tagline: product.tagline,
+      price: product.price,
+      image: product.image,
+      badge: product.badge,
+    });
     playAddToCart();
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
@@ -36,7 +55,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       'https://images.unsplash.com/photo-1570194065650-d99fb4d38c8a?q=80&w=800&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=800&auto=format&fit=crop',
     ];
-    return fallbacks[product.id % fallbacks.length];
+    const index = typeof product.id === 'number' ? product.id : product.id.charCodeAt(0);
+    return fallbacks[index % fallbacks.length];
   };
 
   return (

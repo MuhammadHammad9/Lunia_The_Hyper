@@ -1,7 +1,16 @@
-import { products } from '@/lib/products';
+import { useFeaturedProducts, formatProductForDisplay } from '@/hooks/use-products';
 import { ProductCard } from './ProductCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const ProductsSection = () => {
+  const { data: products, isLoading, error } = useFeaturedProducts();
+
+  if (error) {
+    console.error('Error loading products:', error);
+  }
+
+  const displayProducts = products?.map(formatProductForDisplay) || [];
+
   return (
     <section
       id="products"
@@ -19,16 +28,29 @@ export const ProductsSection = () => {
         <div className="flex gap-4">
           <div className="h-[1px] w-24 bg-foreground/20 self-center" />
           <span className="font-sans text-xs uppercase tracking-widest text-foreground/50">
-            {products.length} Products Available
+            {isLoading ? '...' : displayProducts.length} Products Available
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-4">
+              <Skeleton className="aspect-[4/5] w-full rounded-sm" />
+              <Skeleton className="h-8 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+              <Skeleton className="h-5 w-1/4" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
+          {displayProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </section>
   );
 };

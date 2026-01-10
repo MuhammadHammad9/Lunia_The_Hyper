@@ -1,20 +1,31 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Check, Sparkles } from 'lucide-react';
-import { Product } from '@/lib/products';
+import { DisplayProduct } from '@/components/ProductCard';
 import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface ProductDetailModalProps {
-  product: Product | null;
+  product: DisplayProduct | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-// Extended product data with additional images and ingredients
-const getProductDetails = (product: Product) => {
-  const details: Record<number, { description: string; ingredients: string[]; images: string[] }> = {
+// Get product details - for DB products, use their data; for legacy products, use fallback
+const getProductDetails = (product: DisplayProduct) => {
+  // If product has images array from database, use it
+  if (product.images && product.images.length > 0) {
+    return {
+      description: product.description || `Experience the transformative power of ${product.name}. Our scientifically formulated products combine the best of nature and science for visible results.`,
+      ingredients: product.ingredients ? product.ingredients.split(',').map(i => i.trim()) : ["Natural Botanicals", "Hyaluronic Acid", "Vitamin Complex", "Peptides", "Plant Extracts"],
+      images: product.images,
+      benefits: product.benefits || [],
+    };
+  }
+
+  // Fallback for legacy static products
+  const details: Record<number, { description: string; ingredients: string[]; images: string[]; benefits: string[] }> = {
     1: {
       description: "Our signature Regenerating Serum harnesses the power of bio-fermented snail mucin, clinically proven to boost collagen production by 43%. This ultra-concentrated formula penetrates deep into the dermis, delivering transformative hydration and visible skin renewal within 14 days.",
       ingredients: ["Bio-Fermented Snail Mucin (92%)", "Hyaluronic Acid Complex", "Niacinamide 5%", "Centella Asiatica Extract", "Peptide Complex", "Vitamin E", "Aloe Vera"],
@@ -22,7 +33,8 @@ const getProductDetails = (product: Product) => {
         "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=800&auto=format&fit=crop"
-      ]
+      ],
+      benefits: ['Deep hydration', 'Reduces fine lines', 'Promotes cell regeneration'],
     },
     2: {
       description: "Experience 24-hour moisture lock technology with our Hydrating Cream. Formulated with triple-weight hyaluronic acid and ceramide complex, this luxurious cream creates an invisible moisture barrier that keeps skin plump and dewy all day long.",
@@ -31,7 +43,8 @@ const getProductDetails = (product: Product) => {
         "https://images.unsplash.com/photo-1570194065650-d99fb4d38c8a?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1556228578-8c89e6adf883?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?q=80&w=800&auto=format&fit=crop"
-      ]
+      ],
+      benefits: ['24-hour hydration', 'Plumps skin', 'Strengthens skin barrier'],
     },
     3: {
       description: "Shield your skin with our mineral-based UV Defense SPF 50. This antioxidant-rich formula provides broad-spectrum protection while combating environmental stressors. Lightweight, non-greasy, and perfect for daily wear.",
@@ -40,41 +53,17 @@ const getProductDetails = (product: Product) => {
         "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1571781926291-c477ebfd024b?q=80&w=800&auto=format&fit=crop",
         "https://images.unsplash.com/photo-1596462502278-27bfdc403348?q=80&w=800&auto=format&fit=crop"
-      ]
+      ],
+      benefits: ['Broad spectrum SPF 50', 'Antioxidant protection', 'No white cast'],
     },
-    4: {
-      description: "Awaken to visibly transformed skin with our Night Repair Oil. This retinol alternative uses bakuchiol to deliver anti-aging benefits without irritation. Rich in antioxidants, it works overnight to reduce fine lines and improve skin texture.",
-      ingredients: ["Bakuchiol 1%", "Rosehip Seed Oil", "Evening Primrose Oil", "Vitamin E", "Squalane", "Jojoba Oil", "Lavender Essential Oil"],
-      images: [
-        "https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1556228994-adbdb4d57ae0?q=80&w=800&auto=format&fit=crop"
-      ]
-    },
-    5: {
-      description: "Gently purify with our pH-balanced Purifying Cleanser. This cloud-like foam removes impurities and makeup while maintaining your skin's natural moisture barrier. Perfect for all skin types, morning and night.",
-      ingredients: ["Amino Acid Surfactants", "Green Tea Extract", "Chamomile Extract", "Glycerin", "Vitamin B3", "Aloe Vera", "Centella Asiatica"],
-      images: [
-        "https://images.unsplash.com/photo-1556228578-8c89e6adf883?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1570194065650-d99fb4d38c8a?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=800&auto=format&fit=crop"
-      ]
-    },
-    6: {
-      description: "Target the delicate eye area with our advanced Eye Lift Cream. Infused with peptides and caffeine, this intensive treatment reduces puffiness, dark circles, and fine lines for a more youthful, awakened appearance.",
-      ingredients: ["Peptide Complex", "Caffeine", "Retinyl Palmitate", "Vitamin K", "Hyaluronic Acid", "Cucumber Extract", "Vitamin E"],
-      images: [
-        "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1617897903246-719242758050?q=80&w=800&auto=format&fit=crop",
-        "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=800&auto=format&fit=crop"
-      ]
-    }
   };
 
-  return details[product.id] || {
+  const numId = typeof product.id === 'number' ? product.id : parseInt(String(product.id).slice(-1)) || 1;
+  return details[numId] || {
     description: `Experience the transformative power of ${product.name}. Our scientifically formulated products combine the best of nature and science for visible results.`,
     ingredients: ["Natural Botanicals", "Hyaluronic Acid", "Vitamin Complex", "Peptides", "Plant Extracts"],
-    images: [product.image]
+    images: [product.image],
+    benefits: [],
   };
 };
 
@@ -128,7 +117,14 @@ export const ProductDetailModal = ({ product, isOpen, onClose }: ProductDetailMo
 
   const handleAddToCart = () => {
     if (!product) return;
-    addItem(product.id);
+    addItem({
+      id: product.id,
+      name: product.name,
+      tagline: product.tagline,
+      price: product.price,
+      image: product.image,
+      badge: product.badge,
+    });
     playAddToCart();
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2000);
@@ -263,6 +259,25 @@ export const ProductDetailModal = ({ product, isOpen, onClose }: ProductDetailMo
                   {details.description}
                 </p>
               </div>
+
+              {/* Benefits */}
+              {details.benefits && details.benefits.length > 0 && (
+                <div>
+                  <h3 className="font-sans text-xs uppercase tracking-widest text-foreground/60 mb-3">
+                    Benefits
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {details.benefits.map((benefit, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-sm text-primary"
+                      >
+                        {benefit}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Ingredients */}
               <div>
