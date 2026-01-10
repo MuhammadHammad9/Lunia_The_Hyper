@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
+import { products as fallbackProducts } from '@/lib/products';
 
 export interface DatabaseProduct {
   id: string;
@@ -46,23 +47,57 @@ export interface DatabaseCategory {
   created_at: string;
 }
 
+// Convert static products to database format for fallback
+const convertToDbProduct = (product: typeof fallbackProducts[0]): DatabaseProduct => ({
+  id: String(product.id),
+  name: product.name,
+  tagline: product.tagline,
+  description: null,
+  price: product.price,
+  compare_at_price: null,
+  image_url: product.image,
+  images: null,
+  badge: product.badge,
+  category_id: null,
+  sku: null,
+  stock_quantity: null,
+  is_active: true,
+  is_featured: true,
+  ingredients: null,
+  how_to_use: null,
+  benefits: null,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
 // Fetch all active products
 export const useProducts = () => {
   return useQuery({
     queryKey: ['products'],
     queryFn: async (): Promise<DatabaseProduct[]> => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching products:', error);
-        throw error;
+      // Return fallback products if Supabase is not configured
+      if (!isSupabaseConfigured()) {
+        console.warn('Supabase not configured, using fallback products');
+        return fallbackProducts.map(convertToDbProduct);
       }
 
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching products:', error);
+          return fallbackProducts.map(convertToDbProduct);
+        }
+
+        return data && data.length > 0 ? data : fallbackProducts.map(convertToDbProduct);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        return fallbackProducts.map(convertToDbProduct);
+      }
     },
   });
 };
@@ -72,19 +107,30 @@ export const useFeaturedProducts = () => {
   return useQuery({
     queryKey: ['products', 'featured'],
     queryFn: async (): Promise<DatabaseProduct[]> => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .eq('is_featured', true)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching featured products:', error);
-        throw error;
+      // Return fallback products if Supabase is not configured
+      if (!isSupabaseConfigured()) {
+        console.warn('Supabase not configured, using fallback products');
+        return fallbackProducts.map(convertToDbProduct);
       }
 
-      return data || [];
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .eq('is_featured', true)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching featured products:', error);
+          return fallbackProducts.map(convertToDbProduct);
+        }
+
+        return data && data.length > 0 ? data : fallbackProducts.map(convertToDbProduct);
+      } catch (err) {
+        console.error('Error fetching featured products:', err);
+        return fallbackProducts.map(convertToDbProduct);
+      }
     },
   });
 };
