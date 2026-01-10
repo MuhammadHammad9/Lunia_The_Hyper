@@ -58,7 +58,7 @@ const Index = () => {
       lenis.raf(time * 1000);
     });
 
-    gsap.utils.toArray('.reveal-text').forEach((el: any) => {
+    gsap.utils.toArray<HTMLElement>('.reveal-text').forEach((el) => {
       ScrollTrigger.create({
         trigger: el,
         start: 'top 85%',
@@ -66,7 +66,7 @@ const Index = () => {
       });
     });
 
-    gsap.utils.toArray('.stat-item').forEach((item: any) => {
+    gsap.utils.toArray<HTMLElement>('.stat-item').forEach((item) => {
       ScrollTrigger.create({
         trigger: item,
         start: 'top 80%',

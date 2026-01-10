@@ -177,7 +177,7 @@ const Addresses = () => {
 
       resetForm();
       fetchAddresses();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving address:', error);
       toast.error('Failed to save address');
     } finally {

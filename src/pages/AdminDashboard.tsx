@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Package, ShoppingCart, Users, DollarSign, 
-  TrendingUp, ArrowUpRight, ArrowDownRight, Leaf, Settings,
+  TrendingUp, ArrowUpRight, ArrowDownRight, Leaf,
   BarChart3, Star, AlertCircle, CheckCircle, Clock, XCircle,
   ChevronRight, RefreshCw
 } from 'lucide-react';
@@ -27,7 +27,7 @@ interface RecentOrder {
   status: string;
   total: number;
   created_at: string;
-  shipping_address: any;
+  shipping_address: Record<string, unknown> | null;
 }
 
 interface TopProduct {
@@ -36,30 +36,24 @@ interface TopProduct {
   revenue: number;
 }
 
+interface LowStockProduct {
+  id: string;
+  name: string;
+  stock_quantity: number | null;
+}
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, isModerator, loading: rolesLoading } = useUserRoles();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<any[]>([]);
+  const [lowStockProducts, setLowStockProducts] = useState<LowStockProduct[]>([]);
   const [pendingReviews, setPendingReviews] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d'>('30d');
 
-  useEffect(() => {
-    if (!rolesLoading && !isAdmin && !isModerator) {
-      navigate('/');
-    }
-  }, [isAdmin, isModerator, rolesLoading, navigate]);
-
-  useEffect(() => {
-    if (isAdmin || isModerator) {
-      fetchDashboardData();
-    }
-  }, [isAdmin, isModerator, dateRange]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     setIsLoading(true);
     
     try {
@@ -79,7 +73,7 @@ const AdminDashboard = () => {
       // Fetch previous period orders for comparison
       const { data: previousOrders } = await supabase
         .from('orders')
-        .select('id, total')
+        .select('id, total, user_id')
         .gte('created_at', previousStart.toISOString())
         .lt('created_at', currentStart.toISOString())
         .eq('payment_status', 'paid');
@@ -94,7 +88,7 @@ const AdminDashboard = () => {
       const ordersChange = previousOrderCount ? ((currentOrderCount - previousOrderCount) / previousOrderCount) * 100 : 0;
 
       const uniqueCustomers = new Set(currentOrders?.map(o => o.user_id)).size;
-      const previousUniqueCustomers = new Set(previousOrders?.map((o: any) => o.user_id)).size;
+      const previousUniqueCustomers = new Set(previousOrders?.map(o => o.user_id)).size;
       const customersChange = previousUniqueCustomers ? ((uniqueCustomers - previousUniqueCustomers) / previousUniqueCustomers) * 100 : 0;
 
       const currentAOV = currentOrderCount ? currentRevenue / currentOrderCount : 0;
@@ -165,7 +159,19 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    if (!rolesLoading && !isAdmin && !isModerator) {
+      navigate('/');
+    }
+  }, [isAdmin, isModerator, rolesLoading, navigate]);
+
+  useEffect(() => {
+    if (isAdmin || isModerator) {
+      fetchDashboardData();
+    }
+  }, [isAdmin, isModerator, fetchDashboardData]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -212,7 +218,7 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-4">
             <select
               value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as any)}
+              onChange={(e) => setDateRange(e.target.value as '7d' | '30d' | '90d')}
               className="px-4 py-2 bg-secondary border border-border rounded-lg text-foreground text-sm"
             >
               <option value="7d">Last 7 days</option>
