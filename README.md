@@ -60,6 +60,20 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Security Notes
+
+### Dev-only esbuild Vulnerabilities
+
+This project has 2 moderate severity vulnerabilities in `esbuild` (<=0.24.2), which is a development dependency of Vite. These vulnerabilities:
+
+- **Do not affect production builds** - they only impact the development server
+- **Are dev-only** - end users are not impacted as esbuild is not included in production bundles
+- **Require a breaking change to fix** - resolving them requires upgrading from Vite v5 to v7
+
+The vulnerabilities relate to the development server potentially allowing requests from any website ([GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99)). This is only a concern during local development.
+
+To fix these vulnerabilities in the future, run `npm audit fix --force` when you're ready to upgrade to Vite v7, which may require additional migration steps.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
