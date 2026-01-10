@@ -191,7 +191,8 @@ const AuthContent = () => {
           setMode('login');
         }
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Auth error:', error);
       toast.error('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -417,7 +418,8 @@ const AuthContent = () => {
                       if (error) {
                         toast.error(error.message);
                       }
-                    } catch (error: any) {
+                    } catch (error) {
+                      console.error('Google auth error:', error);
                       toast.error('Failed to connect to Google. Please try again.');
                     } finally {
                       setIsLoading(false);

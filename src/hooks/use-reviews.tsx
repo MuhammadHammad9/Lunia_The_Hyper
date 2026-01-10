@@ -236,22 +236,19 @@ export const useReviews = (productId?: string) => {
             supabase.from('profiles').select('full_name').eq('id', user.id).single(),
           ]);
           
-          // Get author email from auth
-          const { data: authorUser } = await supabase.auth.admin?.getUserById?.(reviewAuthorId) || { data: null };
-          
-          // Use edge function for notification (email would be fetched server-side in production)
+          // Use edge function for notification (email is fetched server-side via user_id)
           try {
             await supabase.functions.invoke('send-review-notification', {
               body: {
                 type: 'like',
-                recipient_email: authorUser?.user?.email || '',
+                recipient_user_id: reviewAuthorId,
                 recipient_name: authorProfile.data?.full_name,
                 liker_name: userProfile.data?.full_name || 'Someone',
                 product_name: productName,
               }
             });
           } catch (e) {
-            console.log('Notification not sent (expected if no admin access)');
+            console.log('Notification not sent:', e);
           }
         }
         

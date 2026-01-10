@@ -164,9 +164,10 @@ const Checkout = () => {
       } else {
         throw new Error('No checkout URL received');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Checkout error:', error);
-      toast.error(error.message || 'Failed to create checkout session. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create checkout session. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -254,9 +255,10 @@ const Checkout = () => {
       setOrderComplete(true);
       
       toast.success('Order placed successfully!');
-    } catch (error: any) {
+    } catch (error) {
       console.error('COD checkout error:', error);
-      toast.error(error.message || 'Failed to place order. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to place order. Please try again.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

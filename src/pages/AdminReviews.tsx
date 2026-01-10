@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRoles } from '@/hooks/use-user-roles';
@@ -14,13 +14,6 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { 
   Dialog, 
   DialogContent, 
@@ -64,17 +57,7 @@ export default function AdminReviews() {
   const [moderationNotes, setModerationNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
-  useEffect(() => {
-    if (!rolesLoading && !isModerator) {
-      navigate('/');
-    }
-  }, [rolesLoading, isModerator, navigate]);
-
-  useEffect(() => {
-    fetchReviews();
-  }, [statusFilter]);
-
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
       let query = supabase
         .from('product_reviews')
@@ -110,7 +93,17 @@ export default function AdminReviews() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    if (!rolesLoading && !isModerator) {
+      navigate('/');
+    }
+  }, [rolesLoading, isModerator, navigate]);
+
+  useEffect(() => {
+    fetchReviews();
+  }, [fetchReviews]);
 
   const handleModerate = async (reviewId: string, status: string) => {
     setActionLoading(true);

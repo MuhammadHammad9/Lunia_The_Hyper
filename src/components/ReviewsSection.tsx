@@ -122,8 +122,8 @@ export const ReviewsSection = () => {
       );
 
       // Floating particles effect
-      const particles = gsap.utils.toArray('.review-particle');
-      particles.forEach((particle: any, i) => {
+      const particles = gsap.utils.toArray<HTMLElement>('.review-particle');
+      particles.forEach((particle, i) => {
         gsap.to(particle, {
           y: 'random(-30, 30)',
           x: 'random(-20, 20)',

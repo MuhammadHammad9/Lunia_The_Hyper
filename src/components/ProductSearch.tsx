@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, Filter, Star, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCategories } from '@/hooks/use-products';
@@ -36,35 +36,7 @@ export const ProductSearch = ({ onProductSelect, onResultsChange }: ProductSearc
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
 
-  // Close on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowResults(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Debounced search
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      performSearch();
-    }, 300);
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [query, selectedCategory, priceRange, minRating]);
-
-  const performSearch = async () => {
+  const performSearch = useCallback(async () => {
     setIsLoading(true);
     
     try {
@@ -99,7 +71,35 @@ export const ProductSearch = ({ onProductSelect, onResultsChange }: ProductSearc
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [query, selectedCategory, priceRange, minRating, onResultsChange]);
+
+  // Close on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      performSearch();
+    }, 300);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [performSearch]);
 
   const handleProductClick = (product: Product) => {
     onProductSelect?.(product);
