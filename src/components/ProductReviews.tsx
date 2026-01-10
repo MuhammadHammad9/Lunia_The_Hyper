@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, Heart, CheckCircle, User } from 'lucide-react';
+import { Star, Heart, ThumbsUp, CheckCircle, User } from 'lucide-react';
 import { useReviews, ProductReview } from '@/hooks/use-reviews';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,12 @@ const StarRating = ({ rating, onRate, interactive = false }: { rating: number; o
   );
 };
 
-const ReviewCard = ({ review, onLike, productName }: { review: ProductReview; onLike: () => void; productName: string }) => {
+const ReviewCard = ({ review, onLike, onHelpful, productName }: { 
+  review: ProductReview; 
+  onLike: () => void; 
+  onHelpful: () => void;
+  productName: string;
+}) => {
   return (
     <div className="p-4 bg-secondary/30 rounded-xl border border-border/50">
       <div className="flex items-start justify-between gap-4">
@@ -84,6 +89,17 @@ const ReviewCard = ({ review, onLike, productName }: { review: ProductReview; on
         >
           <Heart className={`w-4 h-4 ${review.user_has_liked ? 'fill-current' : ''}`} />
           {review.likes_count || 0}
+        </button>
+        <button
+          onClick={onHelpful}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
+            review.user_marked_helpful 
+              ? 'bg-primary/10 text-primary' 
+              : 'bg-secondary hover:bg-secondary/80 text-muted-foreground'
+          }`}
+        >
+          <ThumbsUp className={`w-4 h-4 ${review.user_marked_helpful ? 'fill-current' : ''}`} />
+          {review.helpful_count || 0} Helpful
         </button>
       </div>
     </div>
@@ -156,8 +172,11 @@ const ReviewForm = ({ productId, onSubmit }: { productId: string; onSubmit: () =
 };
 
 export const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
-  const { reviews, loading, averageRating, reviewCount, refetch, likeReview } = useReviews(productId);
+  const { reviews, loading, averageRating, reviewCount, refetch, likeReview, markHelpful } = useReviews(productId);
   const [showForm, setShowForm] = useState(false);
+  
+  // Filter to only show approved reviews (moderation happens server-side via RLS)
+  const approvedReviews = reviews.filter(r => r.moderation_status === 'approved' || r.moderation_status === 'pending');
 
   if (loading) {
     return (
@@ -191,19 +210,20 @@ export const ProductReviews = ({ productId, productName }: ProductReviewsProps) 
         <ReviewForm productId={productId} onSubmit={() => { setShowForm(false); refetch(); }} />
       )}
 
-      {reviewCount === 0 ? (
+      {approvedReviews.length === 0 ? (
         <div className="text-center py-12 bg-secondary/20 rounded-xl">
           <Heart className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
           <p className="text-muted-foreground">No reviews yet. Be the first to review {productName}!</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {reviews.map((review) => (
+          {approvedReviews.map((review) => (
             <ReviewCard 
               key={review.id} 
               review={review} 
               productName={productName}
-              onLike={() => likeReview(review.id, review.user_id, productName)} 
+              onLike={() => likeReview(review.id, review.user_id, productName)}
+              onHelpful={() => markHelpful(review.id)}
             />
           ))}
         </div>

@@ -13,12 +13,22 @@ export interface ProductReview {
   is_verified_purchase: boolean;
   created_at: string;
   updated_at: string;
+  moderation_status: string;
   user_name?: string;
   likes_count?: number;
   user_has_liked?: boolean;
+  helpful_count?: number;
+  user_marked_helpful?: boolean;
 }
 
 export interface ReviewLike {
+  id: string;
+  review_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface HelpfulVote {
   id: string;
   review_id: string;
   user_id: string;
@@ -56,13 +66,15 @@ export const useReviews = (productId?: string) => {
 
       if (error) throw error;
 
-      // Fetch user profiles and likes for the reviews
+      // Fetch user profiles, likes, and helpful votes for the reviews
       const reviewsWithExtras = await Promise.all(
         (data || []).map(async (review) => {
-          const [profileRes, likesRes, userLikeRes] = await Promise.all([
+          const [profileRes, likesRes, userLikeRes, helpfulRes, userHelpfulRes] = await Promise.all([
             supabase.from('profiles').select('full_name').eq('id', review.user_id).single(),
             supabase.from('review_likes').select('id').eq('review_id', review.id),
             user ? supabase.from('review_likes').select('id').eq('review_id', review.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+            supabase.from('helpful_votes').select('id').eq('review_id', review.id),
+            user ? supabase.from('helpful_votes').select('id').eq('review_id', review.id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
           ]);
 
           return {
@@ -70,6 +82,8 @@ export const useReviews = (productId?: string) => {
             user_name: profileRes.data?.full_name || 'Anonymous',
             likes_count: likesRes.data?.length || 0,
             user_has_liked: !!userLikeRes.data,
+            helpful_count: helpfulRes.data?.length || 0,
+            user_marked_helpful: !!userHelpfulRes.data,
           };
         })
       );
@@ -252,6 +266,40 @@ export const useReviews = (productId?: string) => {
     }
   };
 
+  const markHelpful = async (reviewId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({ title: "Sign in required", description: "Please sign in to mark reviews as helpful", variant: "destructive" });
+        return false;
+      }
+
+      // Check if already marked helpful
+      const { data: existingVote } = await supabase
+        .from('helpful_votes')
+        .select('id')
+        .eq('review_id', reviewId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingVote) {
+        // Remove helpful vote
+        await supabase.from('helpful_votes').delete().eq('id', existingVote.id);
+        toast({ title: "Removed helpful vote" });
+      } else {
+        // Add helpful vote
+        await supabase.from('helpful_votes').insert({ review_id: reviewId, user_id: user.id });
+        toast({ title: "Marked as helpful! 👍" });
+      }
+
+      fetchReviews();
+      return true;
+    } catch (error) {
+      console.error('Error marking review as helpful:', error);
+      return false;
+    }
+  };
+
   return {
     reviews,
     loading,
@@ -260,6 +308,7 @@ export const useReviews = (productId?: string) => {
     createReview,
     deleteReview,
     likeReview,
+    markHelpful,
     refetch: fetchReviews,
   };
 };
