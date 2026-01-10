@@ -11,6 +11,7 @@ import Orders from "./pages/Orders";
 import OrderTracking from "./pages/OrderTracking";
 import Addresses from "./pages/Addresses";
 import Wishlist from "./pages/Wishlist";
+import AdminReviews from "./pages/AdminReviews";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -55,6 +56,11 @@ const App = () => (
           <Route path="/wishlist" element={
             <ProtectedRoute>
               <Wishlist />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/reviews" element={
+            <ProtectedRoute>
+              <AdminReviews />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
