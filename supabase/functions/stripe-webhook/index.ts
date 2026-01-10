@@ -36,8 +36,9 @@ const handler = async (req: Request): Promise<Response> => {
     if (webhookSecret && signature) {
       try {
         event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      } catch (err: any) {
-        console.error(`Webhook signature verification failed: ${err.message}`);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        console.error(`Webhook signature verification failed: ${errorMessage}`);
         return new Response(JSON.stringify({ error: "Invalid signature" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -92,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
                 user_name: `${order.shipping_address?.first_name || ""} ${order.shipping_address?.last_name || ""}`.trim(),
                 order_number: orderNumber,
                 order_id: orderId,
-                items: order.order_items?.map((item: any) => ({
+                items: order.order_items?.map((item: { product_name: string; quantity: number; unit_price: number; total_price: number }) => ({
                   product_name: item.product_name,
                   quantity: item.quantity,
                   unit_price: item.unit_price,
@@ -137,10 +138,11 @@ const handler = async (req: Request): Promise<Response> => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Webhook error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
