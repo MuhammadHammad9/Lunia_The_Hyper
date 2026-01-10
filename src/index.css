@@ -438,3 +438,33 @@ html.lenis body {
 .bg-gradient-radial {
   background: radial-gradient(circle, var(--tw-gradient-from) 0%, var(--tw-gradient-to) 70%);
 }
+
+/* Dark mode animated orbs */
+@keyframes dark-orb-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(50px, 30px) scale(1.1); }
+  66% { transform: translate(-30px, 50px) scale(0.95); }
+}
+
+@keyframes dark-orb-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, -20px) scale(1.05); }
+  66% { transform: translate(30px, -40px) scale(1.1); }
+}
+
+@keyframes dark-orb-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.08); }
+}
+
+.animate-dark-orb-1 {
+  animation: dark-orb-1 25s ease-in-out infinite;
+}
+
+.animate-dark-orb-2 {
+  animation: dark-orb-2 30s ease-in-out infinite;
+}
+
+.animate-dark-orb-3 {
+  animation: dark-orb-3 20s ease-in-out infinite;
+}

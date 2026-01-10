@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Sun, Moon, Search, ShoppingBag } from 'lucide-react';
+import { Sun, Moon, Search, ShoppingBag, Volume2, VolumeX } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/hooks/use-cart';
 import { useVirtualPage } from '@/hooks/use-virtual-page';
+import { useSound } from '@/hooks/use-sound';
 import Lenis from '@studio-freight/lenis';
 
 interface NavbarProps {
@@ -14,6 +15,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
   const { isDark, toggleTheme } = useTheme();
   const { count, toggleCart } = useCart();
   const { closePage } = useVirtualPage();
+  const { isSoundEnabled, toggleSoundEnabled, playClick, playToggle } = useSound();
   const [isHidden, setIsHidden] = useState(false);
   const lastScroll = useRef(0);
 
@@ -37,10 +39,20 @@ export const Navbar = ({ lenis }: NavbarProps) => {
 
   const scrollToSection = (id: string) => {
     closePage();
+    playClick();
     const element = document.getElementById(id);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleThemeToggle = () => {
+    playToggle();
+    toggleTheme();
+  };
+
+  const handleSoundToggle = () => {
+    toggleSoundEnabled();
   };
 
   return (
@@ -58,6 +70,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
           onClick={(e) => {
             e.preventDefault();
             closePage();
+            playClick();
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className="font-display text-3xl font-medium tracking-tight relative z-50 group hover-trigger text-foreground"
@@ -92,21 +105,51 @@ export const Navbar = ({ lenis }: NavbarProps) => {
 
         {/* Actions */}
         <div className="flex items-center gap-6 z-50 text-foreground">
+          {/* Sound Toggle */}
           <button
-            onClick={toggleTheme}
+            onClick={handleSoundToggle}
+            className="relative hover:text-primary transition-all hover:scale-110 duration-300 hover-trigger group"
+            aria-label={isSoundEnabled ? 'Disable sound' : 'Enable sound'}
+          >
+            <div className="relative">
+              {isSoundEnabled ? (
+                <Volume2 className="w-5 h-5 transition-transform duration-300" />
+              ) : (
+                <VolumeX className="w-5 h-5 transition-transform duration-300" />
+              )}
+              {/* Animated indicator */}
+              {isSoundEnabled && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full animate-pulse" />
+              )}
+            </div>
+          </button>
+
+          {/* Theme Toggle */}
+          <button
+            onClick={handleThemeToggle}
             className="hover:text-primary transition-colors hover:scale-110 duration-300 hover-trigger"
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
+
+          {/* Search */}
           <button
-            onClick={() => {}}
+            onClick={() => playClick()}
             className="hover:text-primary transition-colors hover:scale-110 duration-300 hover-trigger"
+            aria-label="Search"
           >
             <Search className="w-5 h-5" />
           </button>
+
+          {/* Cart */}
           <button
-            onClick={toggleCart}
+            onClick={() => {
+              playClick();
+              toggleCart();
+            }}
             className="relative hover:text-primary transition-colors group hover-trigger"
+            aria-label="Shopping cart"
           >
             <ShoppingBag className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
             {count() > 0 && (
