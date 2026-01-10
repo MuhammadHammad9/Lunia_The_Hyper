@@ -6,7 +6,7 @@ import { allProducts, bundles, Product, giftCardProduct } from '@/lib/products';
 import { ProductCard } from './ProductCard';
 import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
-import Lenis from '@studio-freight/lenis';
+import Lenis from 'lenis';
 
 interface VirtualPagesProps {
   lenis: Lenis | null;

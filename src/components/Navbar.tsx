@@ -6,7 +6,7 @@ import { useVirtualPage } from '@/hooks/use-virtual-page';
 import { useSound } from '@/hooks/use-sound';
 import { UserMenu } from '@/components/UserMenu';
 import { MobileMenu } from '@/components/MobileMenu';
-import Lenis from '@studio-freight/lenis';
+import Lenis from 'lenis';
 
 interface NavbarProps {
   lenis: Lenis | null;
