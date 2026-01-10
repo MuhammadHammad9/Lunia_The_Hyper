@@ -3,19 +3,9 @@ import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
 import { useProductModal } from '@/hooks/use-product-modal';
 import { Check } from 'lucide-react';
+import { DisplayProduct } from '@/types/product';
 
-export interface DisplayProduct {
-  id: string | number;
-  name: string;
-  tagline: string;
-  price: number;
-  image: string;
-  badge: string | null;
-  description?: string | null;
-  ingredients?: string | null;
-  benefits?: string[] | null;
-  images?: string[];
-}
+export type { DisplayProduct };
 
 interface ProductCardProps {
   product: DisplayProduct;

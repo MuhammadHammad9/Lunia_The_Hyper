@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DisplayProduct } from '@/components/ProductCard';
+import { DisplayProduct } from '@/types/product';
 
 interface ProductModalState {
   isOpen: boolean;
