@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Leaf, ArrowLeft, Package, Truck, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Leaf, ArrowLeft, Package, Truck, CheckCircle, Clock, XCircle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 
@@ -240,6 +240,18 @@ const Orders = () => {
                         <p className="text-sm text-amber-600 dark:text-amber-400">
                           💵 {order.payment_method === 'pay_on_delivery' ? 'Pay on Delivery' : order.payment_method} • {order.payment_status === 'pending' ? 'Payment Pending' : 'Paid'}
                         </p>
+                      </div>
+
+                      {/* Track Order Button */}
+                      <div className="mt-4">
+                        <Link
+                          to={`/order-tracking/${order.id}`}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          <Truck className="w-4 h-4" />
+                          Track Order
+                          <ExternalLink className="w-3 h-3" />
+                        </Link>
                       </div>
                     </div>
                   )}

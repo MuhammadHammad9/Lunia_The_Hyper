@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
+import OrderTracking from "./pages/OrderTracking";
 import Addresses from "./pages/Addresses";
 import Wishlist from "./pages/Wishlist";
 import NotFound from "./pages/NotFound";
@@ -39,6 +40,11 @@ const App = () => (
           <Route path="/orders" element={
             <ProtectedRoute>
               <Orders />
+            </ProtectedRoute>
+          } />
+          <Route path="/order-tracking/:orderId" element={
+            <ProtectedRoute>
+              <OrderTracking />
             </ProtectedRoute>
           } />
           <Route path="/addresses" element={
