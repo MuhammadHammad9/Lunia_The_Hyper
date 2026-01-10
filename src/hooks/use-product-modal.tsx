@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import { Product } from '@/lib/products';
+import { DisplayProduct } from '@/components/ProductCard';
 
 interface ProductModalState {
   isOpen: boolean;
-  product: Product | null;
-  openModal: (product: Product) => void;
+  product: DisplayProduct | null;
+  openModal: (product: DisplayProduct) => void;
   closeModal: () => void;
 }
 

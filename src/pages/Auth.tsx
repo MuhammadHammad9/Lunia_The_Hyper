@@ -334,9 +334,20 @@ const AuthContent = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
+                  disabled={isLoading}
+                  onClick={async () => {
                     playClick();
-                    toast.info('Google authentication coming soon!');
+                    setIsLoading(true);
+                    const { error } = await supabase.auth.signInWithOAuth({
+                      provider: 'google',
+                      options: {
+                        redirectTo: `${window.location.origin}/`,
+                      }
+                    });
+                    if (error) {
+                      toast.error(error.message);
+                      setIsLoading(false);
+                    }
                   }}
                   onMouseEnter={playHover}
                   className="flex items-center justify-center gap-3 py-4 bg-secondary/50 border border-border rounded-xl hover:bg-secondary hover:border-primary/30 transition-all duration-300 group"

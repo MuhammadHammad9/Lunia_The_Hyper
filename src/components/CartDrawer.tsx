@@ -1,8 +1,10 @@
-import { X, ShoppingBag } from 'lucide-react';
+import { X, ShoppingBag, Plus, Minus } from 'lucide-react';
 import { useCart } from '@/hooks/use-cart';
+import { useSound } from '@/hooks/use-sound';
 
 export const CartDrawer = () => {
-  const { items, isOpen, removeItem, toggleCart, total, setCartOpen } = useCart();
+  const { items, isOpen, removeItem, updateQuantity, toggleCart, total, setCartOpen } = useCart();
+  const { playClick } = useSound();
 
   return (
     <>
@@ -42,9 +44,9 @@ export const CartDrawer = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {items.map((item, index) => (
+              {items.map((item) => (
                 <div
-                  key={`${item.id}-${index}`}
+                  key={item.id}
                   className="flex gap-5 animate-[fadeIn_0.4s_ease-out]"
                 >
                   <img
@@ -58,19 +60,47 @@ export const CartDrawer = () => {
                         {item.name}
                       </h3>
                       <p className="text-[10px] uppercase tracking-widest text-foreground/50">
-                        Qty: {item.quantity}
+                        {item.tagline}
                       </p>
                     </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          updateQuantity(item.id, item.quantity - 1);
+                          playClick();
+                        }}
+                        className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="text-sm font-medium text-foreground w-6 text-center">
+                        {item.quantity}
+                      </span>
+                      <button
+                        onClick={() => {
+                          updateQuantity(item.id, item.quantity + 1);
+                          playClick();
+                        }}
+                        className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col justify-between items-end py-1">
+                    <button
+                      onClick={() => {
+                        removeItem(item.id);
+                        playClick();
+                      }}
+                      className="text-foreground/40 hover:text-destructive transition-colors hover-trigger"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                     <span className="font-sans font-medium text-foreground">
-                      ${item.price * item.quantity}
+                      ${(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
-                  <button
-                    onClick={() => removeItem(index)}
-                    className="text-foreground/40 hover:text-destructive transition-colors self-start hover-trigger"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
                 </div>
               ))}
             </div>

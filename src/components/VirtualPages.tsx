@@ -54,7 +54,14 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
   }, [currentPage, lenis, playPageOpen, playPageClose]);
 
   const handleAddGiftCard = () => {
-    addItem(giftCardProduct.id);
+    addItem({
+      id: giftCardProduct.id,
+      name: giftCardProduct.name,
+      tagline: giftCardProduct.tagline,
+      price: giftAmount, // Use selected gift amount
+      image: giftCardProduct.image,
+      badge: giftCardProduct.badge,
+    });
     setAddedToCart(true);
     playClick();
     setTimeout(() => setAddedToCart(false), 2000);
@@ -251,7 +258,14 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-32">
               {allProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard key={product.id} product={{
+                  id: product.id,
+                  name: product.name,
+                  tagline: product.tagline,
+                  price: product.price,
+                  image: product.image,
+                  badge: product.badge,
+                }} />
               ))}
             </div>
           </div>
@@ -271,7 +285,14 @@ export const VirtualPages = ({ lenis }: VirtualPagesProps) => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-32">
               {bundles.map((bundle) => (
-                <ProductCard key={bundle.id} product={bundle} />
+                <ProductCard key={bundle.id} product={{
+                  id: bundle.id,
+                  name: bundle.name,
+                  tagline: bundle.tagline,
+                  price: bundle.price,
+                  image: bundle.image,
+                  badge: bundle.badge,
+                }} />
               ))}
             </div>
           </div>

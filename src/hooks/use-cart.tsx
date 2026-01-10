@@ -1,64 +1,96 @@
 import { create } from 'zustand';
-import { Product, allProducts, bundles } from '@/lib/products';
+import { persist } from 'zustand/middleware';
 
-interface CartItem extends Product {
+export interface CartItem {
+  id: string;
+  name: string;
+  tagline: string;
+  price: number;
+  image: string;
+  badge: string | null;
   quantity: number;
 }
 
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (productId: number) => void;
-  removeItem: (index: number) => void;
+  addItem: (product: { id: string | number; name: string; tagline: string; price: number; image: string; badge: string | null }) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   toggleCart: () => void;
   setCartOpen: (open: boolean) => void;
+  clearCart: () => void;
   total: () => number;
   count: () => number;
 }
 
-const findProduct = (id: number): Product | undefined => {
-  return [...allProducts, ...bundles].find((p) => p.id === id);
-};
+export const useCart = create<CartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      isOpen: false,
+      
+      addItem: (product) => {
+        const productId = String(product.id);
+        
+        set((state) => {
+          const existing = state.items.find((item) => item.id === productId);
+          if (existing) {
+            return {
+              items: state.items.map((item) =>
+                item.id === productId
+                  ? { ...item, quantity: item.quantity + 1 }
+                  : item
+              ),
+            };
+          }
+          return {
+            items: [...state.items, { 
+              id: productId,
+              name: product.name,
+              tagline: product.tagline,
+              price: product.price,
+              image: product.image,
+              badge: product.badge,
+              quantity: 1 
+            }],
+          };
+        });
+      },
+      
+      removeItem: (id: string) => {
+        set((state) => ({
+          items: state.items.filter((item) => item.id !== id),
+        }));
+      },
 
-export const useCart = create<CartState>((set, get) => ({
-  items: [],
-  isOpen: false,
-  
-  addItem: (productId: number) => {
-    const product = findProduct(productId);
-    if (!product) return;
-    
-    set((state) => {
-      const existing = state.items.find((item) => item.id === productId);
-      if (existing) {
-        return {
+      updateQuantity: (id: string, quantity: number) => {
+        if (quantity <= 0) {
+          get().removeItem(id);
+          return;
+        }
+        set((state) => ({
           items: state.items.map((item) =>
-            item.id === productId
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
+            item.id === id ? { ...item, quantity } : item
           ),
-        };
-      }
-      return {
-        items: [...state.items, { ...product, quantity: 1 }],
-      };
-    });
-  },
-  
-  removeItem: (index: number) => {
-    set((state) => ({
-      items: state.items.filter((_, i) => i !== index),
-    }));
-  },
-  
-  toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
-  setCartOpen: (open: boolean) => set({ isOpen: open }),
-  
-  total: () => {
-    return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  },
-  
-  count: () => {
-    return get().items.reduce((sum, item) => sum + item.quantity, 0);
-  },
-}));
+        }));
+      },
+      
+      toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
+      setCartOpen: (open: boolean) => set({ isOpen: open }),
+      clearCart: () => set({ items: [] }),
+      
+      total: () => {
+        return get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      },
+      
+      count: () => {
+        return get().items.reduce((sum, item) => sum + item.quantity, 0);
+      },
+    }),
+    {
+      name: 'lunia-cart',
+      partialize: (state) => ({ items: state.items }),
+    }
+  )
+);
