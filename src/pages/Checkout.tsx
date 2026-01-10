@@ -105,8 +105,10 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
-      // Generate order number
-      const newOrderNumber = `LUN-${Date.now().toString(36).toUpperCase()}`;
+      // Generate cryptographically secure order number
+      const randomBytes = new Uint8Array(6);
+      crypto.getRandomValues(randomBytes);
+      const newOrderNumber = `LUN-${Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
       
       // Create order in database - Pay on Delivery
       const { data: order, error: orderError } = await supabase
