@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface CartItem {
   id: string;
@@ -14,7 +16,7 @@ export interface CartItem {
 interface CartState {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (product: { id: string | number; name: string; tagline: string; price: number; image: string; badge: string | null }) => void;
+  addItem: (product: { id: string | number; name: string; tagline: string; price: number; image: string; badge: string | null }) => Promise<boolean>;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   toggleCart: () => void;
@@ -30,7 +32,22 @@ export const useCart = create<CartState>()(
       items: [],
       isOpen: false,
       
-      addItem: (product) => {
+      addItem: async (product) => {
+        // Check if user is authenticated
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          toast.error('Please sign in to add items to your cart', {
+            action: {
+              label: 'Sign In',
+              onClick: () => {
+                window.location.href = '/auth?mode=login';
+              },
+            },
+          });
+          return false;
+        }
+        
         const productId = String(product.id);
         
         set((state) => {
@@ -56,6 +73,8 @@ export const useCart = create<CartState>()(
             }],
           };
         });
+        
+        return true;
       },
       
       removeItem: (id: string) => {

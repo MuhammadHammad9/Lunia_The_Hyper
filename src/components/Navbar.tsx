@@ -4,6 +4,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useCart } from '@/hooks/use-cart';
 import { useVirtualPage } from '@/hooks/use-virtual-page';
 import { useSound } from '@/hooks/use-sound';
+import { UserMenu } from '@/components/UserMenu';
 import Lenis from '@studio-freight/lenis';
 
 interface NavbarProps {
@@ -104,11 +105,11 @@ export const Navbar = ({ lenis }: NavbarProps) => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-6 z-50 text-foreground">
+        <div className="flex items-center gap-4 sm:gap-6 z-50 text-foreground">
           {/* Sound Toggle */}
           <button
             onClick={handleSoundToggle}
-            className="relative hover:text-primary transition-all hover:scale-110 duration-300 hover-trigger group"
+            className="relative hover:text-primary transition-all hover:scale-110 duration-300 hover-trigger group hidden sm:block"
             aria-label={isSoundEnabled ? 'Disable sound' : 'Enable sound'}
           >
             <div className="relative">
@@ -136,7 +137,7 @@ export const Navbar = ({ lenis }: NavbarProps) => {
           {/* Search */}
           <button
             onClick={() => playClick()}
-            className="hover:text-primary transition-colors hover:scale-110 duration-300 hover-trigger"
+            className="hover:text-primary transition-colors hover:scale-110 duration-300 hover-trigger hidden sm:block"
             aria-label="Search"
           >
             <Search className="w-5 h-5" />
@@ -158,6 +159,9 @@ export const Navbar = ({ lenis }: NavbarProps) => {
               </span>
             )}
           </button>
+
+          {/* User Menu */}
+          <UserMenu />
         </div>
       </div>
     </nav>
