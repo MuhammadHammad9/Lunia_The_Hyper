@@ -1,10 +1,18 @@
 import { X, ShoppingBag, Plus, Minus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/use-cart';
 import { useSound } from '@/hooks/use-sound';
 
 export const CartDrawer = () => {
+  const navigate = useNavigate();
   const { items, isOpen, removeItem, updateQuantity, toggleCart, total, setCartOpen } = useCart();
   const { playClick } = useSound();
+
+  const handleCheckout = () => {
+    playClick();
+    setCartOpen(false);
+    navigate('/checkout');
+  };
 
   return (
     <>
@@ -113,7 +121,11 @@ export const CartDrawer = () => {
             <span>Total</span>
             <span>${total().toFixed(2)}</span>
           </div>
-          <button className="w-full py-5 bg-foreground text-background font-sans text-xs uppercase tracking-[0.2em] hover:bg-primary transition-colors hover-trigger">
+          <button 
+            onClick={handleCheckout}
+            disabled={items.length === 0}
+            className="w-full py-5 bg-foreground text-background font-sans text-xs uppercase tracking-[0.2em] hover:bg-primary transition-colors hover-trigger disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Checkout
           </button>
         </div>
