@@ -27,7 +27,7 @@ interface RecentOrder {
   status: string;
   total: number;
   created_at: string;
-  shipping_address: Record<string, unknown> | null;
+  shipping_address: { first_name?: string; last_name?: string } | null;
 }
 
 interface TopProduct {
@@ -113,7 +113,12 @@ const AdminDashboard = () => {
         .order('created_at', { ascending: false })
         .limit(5);
 
-      setRecentOrders(recent || []);
+      // Type-cast shipping_address properly
+      const typedOrders: RecentOrder[] = (recent || []).map(order => ({
+        ...order,
+        shipping_address: order.shipping_address as RecentOrder['shipping_address'],
+      }));
+      setRecentOrders(typedOrders);
 
       // Fetch top products
       const { data: orderItems } = await supabase
