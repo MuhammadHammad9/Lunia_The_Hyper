@@ -10,4 +10,6 @@ export interface DisplayProduct {
   ingredients?: string | null;
   benefits?: string[] | null;
   images?: string[];
+  stockQuantity?: number | null;
+  isOutOfStock?: boolean;
 }

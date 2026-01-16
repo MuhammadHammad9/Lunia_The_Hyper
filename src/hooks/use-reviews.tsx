@@ -123,7 +123,7 @@ export const useReviews = (productId?: string) => {
         .select('id')
         .eq('user_id', user.id)
         .eq('product_id', data.product_id)
-        .single();
+        .maybeSingle();
 
       if (existingReview) {
         toast({
@@ -134,16 +134,26 @@ export const useReviews = (productId?: string) => {
         return false;
       }
 
-      // Check if this is a verified purchase
-      let isVerified = false;
-      if (data.order_id) {
-        const { data: orderItem } = await supabase
-          .from('order_items')
-          .select('id')
-          .eq('order_id', data.order_id)
-          .eq('product_id', data.product_id)
-          .single();
-        isVerified = !!orderItem;
+      // Check if this is a verified purchase - user must have bought this product
+      const { data: purchaseData } = await supabase
+        .from('order_items')
+        .select('id, order_id, orders!inner(id, user_id, payment_status)')
+        .eq('product_id', data.product_id)
+        .eq('orders.user_id', user.id)
+        .eq('orders.payment_status', 'paid')
+        .limit(1);
+
+      const isVerified = purchaseData && purchaseData.length > 0;
+      const orderId = purchaseData?.[0]?.order_id || null;
+
+      // Only allow reviews from verified purchases
+      if (!isVerified) {
+        toast({
+          title: "Purchase required",
+          description: "You can only review products you've purchased",
+          variant: "destructive",
+        });
+        return false;
       }
 
       const { error } = await supabase
@@ -151,7 +161,7 @@ export const useReviews = (productId?: string) => {
         .insert({
           user_id: user.id,
           product_id: data.product_id,
-          order_id: data.order_id || null,
+          order_id: orderId,
           rating: data.rating,
           title: data.title || null,
           content: data.content || null,
@@ -162,7 +172,7 @@ export const useReviews = (productId?: string) => {
 
       toast({
         title: "Review submitted",
-        description: "Thank you for your feedback!",
+        description: "Thank you for your feedback! Your review will be visible after moderation.",
       });
 
       fetchReviews();
@@ -342,4 +352,61 @@ export const useUserReviews = () => {
   }, []);
 
   return { reviews, loading };
+};
+
+export const useCanReviewProduct = (productId?: string) => {
+  const [canReview, setCanReview] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkReviewEligibility = async () => {
+      if (!productId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setLoading(false);
+          return;
+        }
+
+        // Check if user already reviewed this product
+        const { data: existingReview } = await supabase
+          .from('product_reviews')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+        if (existingReview) {
+          setHasReviewed(true);
+          setCanReview(false);
+          setLoading(false);
+          return;
+        }
+
+        // Check if user has purchased this product
+        const { data: purchaseData } = await supabase
+          .from('order_items')
+          .select('id, orders!inner(id, user_id, payment_status)')
+          .eq('product_id', productId)
+          .eq('orders.user_id', user.id)
+          .eq('orders.payment_status', 'paid')
+          .limit(1);
+
+        setCanReview(purchaseData && purchaseData.length > 0);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error checking review eligibility:', error);
+        setLoading(false);
+      }
+    };
+
+    checkReviewEligibility();
+  }, [productId]);
+
+  return { canReview, hasReviewed, loading };
 };

@@ -40,6 +40,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose }: ProductDetailMo
   const details = product ? getProductDetails(product) : null;
   const isValidUUID = product?.id && typeof product.id === 'string' && 
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(product.id);
+  const isOutOfStock = product?.isOutOfStock || product?.badge === 'Out of Stock';
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -56,7 +57,7 @@ export const ProductDetailModal = ({ product, isOpen, onClose }: ProductDetailMo
   }, [onClose, playModalClose]);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || isOutOfStock) return;
     addItem({
       id: product.id,
       name: product.name,
@@ -143,9 +144,16 @@ export const ProductDetailModal = ({ product, isOpen, onClose }: ProductDetailMo
 
               <button
                 onClick={handleAddToCart}
-                className={`w-full py-4 rounded-full font-medium transition-all ${isAdded ? 'bg-primary/20 text-primary' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
+                disabled={isOutOfStock}
+                className={`w-full py-4 rounded-full font-medium transition-all ${
+                  isOutOfStock 
+                    ? 'bg-muted text-muted-foreground cursor-not-allowed' 
+                    : isAdded 
+                      ? 'bg-primary/20 text-primary' 
+                      : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                }`}
               >
-                {isAdded ? <><Check className="w-4 h-4 inline mr-2" />Added to Cart</> : `Add to Cart — $${product.price}`}
+                {isOutOfStock ? 'Out of Stock' : isAdded ? <><Check className="w-4 h-4 inline mr-2" />Added to Cart</> : `Add to Cart — $${product.price}`}
               </button>
 
               {isValidUUID && (

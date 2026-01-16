@@ -212,6 +212,8 @@ export const formatProductForDisplay = (product: DatabaseProduct) => ({
   ingredients: product.ingredients,
   benefits: product.benefits,
   images: product.images || [product.image_url],
+  stockQuantity: product.stock_quantity,
+  isOutOfStock: product.stock_quantity !== null && product.stock_quantity <= 0,
 });
 
 export const formatBundleForDisplay = (bundle: DatabaseBundle) => ({
