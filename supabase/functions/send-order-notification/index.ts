@@ -38,6 +38,13 @@ const getStatusMessage = (status: string) => {
         message: 'Your order has been successfully delivered. We hope you love your new skincare products!',
         emoji: '✨'
       };
+    case 'cancelled':
+      return {
+        subject: 'Your order has been cancelled',
+        headline: 'Order Cancelled',
+        message: 'Your order has been cancelled. If you have any questions or need assistance, please contact our support team.',
+        emoji: '❌'
+      };
     default:
       return {
         subject: `Order status update: ${status}`,

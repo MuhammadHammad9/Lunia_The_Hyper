@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Star, Heart, ThumbsUp, CheckCircle, User } from 'lucide-react';
-import { useReviews, ProductReview } from '@/hooks/use-reviews';
+import { Star, Heart, ThumbsUp, CheckCircle, User, ShoppingBag } from 'lucide-react';
+import { useReviews, ProductReview, useCanReviewProduct } from '@/hooks/use-reviews';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -173,6 +173,7 @@ const ReviewForm = ({ productId, onSubmit }: { productId: string; onSubmit: () =
 
 export const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
   const { reviews, loading, averageRating, reviewCount, refetch, likeReview, markHelpful } = useReviews(productId);
+  const { canReview, hasReviewed, loading: eligibilityLoading } = useCanReviewProduct(productId);
   const [showForm, setShowForm] = useState(false);
   
   // Filter to only show approved reviews (moderation happens server-side via RLS)
@@ -201,12 +202,28 @@ export const ProductReviews = ({ productId, productName }: ProductReviewsProps) 
             </div>
           )}
         </div>
-        <Button variant="outline" onClick={() => setShowForm(!showForm)}>
-          {showForm ? 'Cancel' : 'Write a Review'}
-        </Button>
+        {!eligibilityLoading && (
+          <>
+            {hasReviewed ? (
+              <span className="text-sm text-muted-foreground flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-primary" />
+                You've reviewed this product
+              </span>
+            ) : canReview ? (
+              <Button variant="outline" onClick={() => setShowForm(!showForm)}>
+                {showForm ? 'Cancel' : 'Write a Review'}
+              </Button>
+            ) : (
+              <span className="text-sm text-muted-foreground flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4" />
+                Purchase to review
+              </span>
+            )}
+          </>
+        )}
       </div>
 
-      {showForm && (
+      {showForm && canReview && (
         <ReviewForm productId={productId} onSubmit={() => { setShowForm(false); refetch(); }} />
       )}
 

@@ -25,10 +25,11 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
 
     const productId = String(product.id);
     const inWishlist = isInWishlist(productId);
+    const isOutOfStock = product.isOutOfStock || product.badge === 'Out of Stock';
 
     const handleAddToCart = async (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (isAdding) return;
+      if (isAdding || isOutOfStock) return;
       
       setIsAdding(true);
       const success = await addItem({
@@ -123,15 +124,19 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
           </button>
           <button
             onClick={handleAddToCart}
-            disabled={isAdding}
+            disabled={isAdding || isOutOfStock}
             className={`absolute bottom-6 left-1/2 -translate-x-1/2 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 px-6 py-3 rounded-full font-medium text-[11px] uppercase tracking-wider flex items-center gap-2 shadow-xl ${
-              added 
-                ? 'bg-primary/20 text-primary border border-primary' 
-                : 'bg-primary text-primary-foreground hover:shadow-2xl hover:shadow-primary/30'
+              isOutOfStock
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : added 
+                  ? 'bg-primary/20 text-primary border border-primary' 
+                  : 'bg-primary text-primary-foreground hover:shadow-2xl hover:shadow-primary/30'
             } ${isAdding ? 'opacity-70 cursor-wait' : ''}`}
-            aria-label={added ? 'Added to cart' : `Add ${product.name} to cart - $${product.price}`}
+            aria-label={isOutOfStock ? 'Out of stock' : added ? 'Added to cart' : `Add ${product.name} to cart - $${product.price}`}
           >
-            {added ? (
+            {isOutOfStock ? (
+              'Out of Stock'
+            ) : added ? (
               <>
                 <Check className="w-3 h-3" /> Added
               </>
@@ -141,6 +146,14 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               `Add — $${product.price}`
             )}
           </button>
+          {/* Out of Stock Overlay */}
+          {isOutOfStock && (
+            <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+              <span className="px-4 py-2 bg-muted text-muted-foreground rounded-full text-sm font-medium uppercase tracking-wider">
+                Out of Stock
+              </span>
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <h3 className="font-display text-xl lg:text-2xl italic group-hover:text-primary transition-colors duration-300 text-foreground">

@@ -652,6 +652,7 @@ export type Database = {
           ingredients: string | null
           is_active: boolean | null
           is_featured: boolean | null
+          low_stock_threshold: number | null
           name: string
           price: number
           sku: string | null
@@ -674,6 +675,7 @@ export type Database = {
           ingredients?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
+          low_stock_threshold?: number | null
           name: string
           price: number
           sku?: string | null
@@ -696,6 +698,7 @@ export type Database = {
           ingredients?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
+          low_stock_threshold?: number | null
           name?: string
           price?: number
           sku?: string | null
@@ -819,6 +822,41 @@ export type Database = {
           },
         ]
       }
+      stock_reservations: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          product_id: string | null
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          product_id?: string | null
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reservations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -892,7 +930,9 @@ export type Database = {
         }
         Returns: undefined
       }
+      cleanup_expired_reservations: { Args: never; Returns: undefined }
       generate_secure_order_number: { Args: never; Returns: string }
+      get_available_stock: { Args: { p_product_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
