@@ -746,6 +746,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          request_count: number
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          request_count?: number
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          request_count?: number
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       review_likes: {
         Row: {
           created_at: string
@@ -930,7 +957,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      check_rate_limit: {
+        Args: {
+          p_action_type: string
+          p_max_requests?: number
+          p_user_id: string
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
       cleanup_expired_reservations: { Args: never; Returns: undefined }
+      cleanup_rate_limits: { Args: never; Returns: undefined }
       generate_secure_order_number: { Args: never; Returns: string }
       get_available_stock: { Args: { p_product_id: string }; Returns: number }
       has_role: {
@@ -940,6 +977,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      unsubscribe_newsletter: { Args: { p_email: string }; Returns: boolean }
       validate_discount_code: {
         Args: { p_code: string; p_order_total: number; p_user_id: string }
         Returns: Json
