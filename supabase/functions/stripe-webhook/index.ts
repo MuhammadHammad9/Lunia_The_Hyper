@@ -17,7 +17,29 @@ const handler = async (req: Request): Promise<Response> => {
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     
     if (!stripeKey) {
-      throw new Error("Stripe secret key not configured");
+      console.error("STRIPE_SECRET_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "Stripe secret key not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // SECURITY: Webhook secret is mandatory - never process unsigned requests
+    if (!webhookSecret) {
+      console.error("STRIPE_WEBHOOK_SECRET is not configured - rejecting request");
+      return new Response(
+        JSON.stringify({ error: "Webhook secret not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const signature = req.headers.get("stripe-signature");
+    if (!signature) {
+      console.error("Missing stripe-signature header");
+      return new Response(
+        JSON.stringify({ error: "Missing signature" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const stripe = new Stripe(stripeKey, {
@@ -29,24 +51,18 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.text();
-    const signature = req.headers.get("stripe-signature");
-
     let event: Stripe.Event;
 
-    if (webhookSecret && signature) {
-      try {
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
-        console.error(`Webhook signature verification failed: ${errorMessage}`);
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
-      // For testing without webhook secret
-      event = JSON.parse(body);
+    // SECURITY: Always verify webhook signature - no bypass allowed
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      console.error(`Webhook signature verification failed: ${errorMessage}`);
+      return new Response(
+        JSON.stringify({ error: "Invalid signature" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log(`Received event: ${event.type}`);
